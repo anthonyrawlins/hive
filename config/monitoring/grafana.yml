@@ -1,0 +1,16 @@
+dashboards:
+  agent_performance:
+    panels:
+    - Tokens per Second
+    - GPU Utilization
+    - Memory Usage
+    - Active Tasks
+    title: Agent Performance Details
+  hive_overview:
+    panels:
+    - Agent Status
+    - Task Queue Length
+    - Execution Success Rate
+    - Response Times
+    - Resource Utilization
+    title: Hive Cluster Overview

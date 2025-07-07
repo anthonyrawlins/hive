@@ -1,0 +1,211 @@
+hive:
+  cluster:
+    name: Development Cluster
+    region: home.deepblack.cloud
+  agents:
+    acacia_agent:
+      name: ACACIA Infrastructure Specialist
+      endpoint: http://192.168.1.72:11434
+      model: deepseek-r1:7b
+      specialization: Infrastructure, DevOps & System Architecture
+      capabilities:
+      - infrastructure_design
+      - devops_automation
+      - system_architecture
+      - database_design
+      - security_implementation
+      - container_orchestration
+      - cloud_deployment
+      - monitoring_setup
+      hardware:
+        gpu_type: NVIDIA GTX 1070
+        vram_gb: 8
+        cpu_cores: 56
+        ram_gb: 128
+        storage_type: NFS Server + NVMe SSDs
+        network_role: NAS + Services Host
+      performance_targets:
+        min_tokens_per_second: 3.0
+        max_response_time_ms: 30000
+        target_availability: 0.99
+    walnut_agent:
+      name: WALNUT Senior Full-Stack Developer
+      endpoint: http://192.168.1.27:11434
+      model: starcoder2:15b
+      specialization: Senior Full-Stack Development & Architecture
+      capabilities:
+      - full_stack_development
+      - frontend_frameworks
+      - backend_apis
+      - database_integration
+      - performance_optimization
+      - code_architecture
+      - react_development
+      - nodejs_development
+      - typescript_expertise
+      hardware:
+        gpu_type: AMD RX 9060 XT (RDNA 4)
+        vram_gb: 16
+        cpu_cores: 16
+        ram_gb: 64
+        storage_type: 2x 1TB NVMe SSDs
+        network_role: Docker Swarm Manager
+      performance_targets:
+        min_tokens_per_second: 8.0
+        max_response_time_ms: 20000
+        target_availability: 0.99
+    ironwood_agent:
+      name: IRONWOOD Backend Development Specialist
+      endpoint: http://192.168.1.113:11434
+      model: deepseek-coder-v2
+      specialization: Backend Development & Code Analysis
+      capabilities:
+      - backend_development
+      - api_design
+      - code_analysis
+      - debugging
+      - testing_frameworks
+      - database_optimization
+      - microservices_architecture
+      - rest_api_development
+      - graphql_implementation
+      hardware:
+        gpu_type: NVIDIA RTX 3070
+        vram_gb: 8
+        cpu_cores: 24
+        ram_gb: 128
+        storage_type: High-performance storage array
+        network_role: Development Workstation
+      performance_targets:
+        min_tokens_per_second: 6.0
+        max_response_time_ms: 25000
+        target_availability: 0.95
+    rosewood_agent:
+      name: ROSEWOOD Quality Assurance & Testing Specialist
+      endpoint: http://192.168.1.132:11434
+      model: deepseek-r1:8b
+      specialization: Quality Assurance, Testing & Code Review
+      capabilities:
+      - quality_assurance
+      - automated_testing
+      - unit_testing
+      - integration_testing
+      - end_to_end_testing
+      - code_review
+      - test_automation
+      - performance_testing
+      - regression_testing
+      - ui_testing
+      - accessibility_testing
+      - security_testing
+      - load_testing
+      - vision_testing
+      - visual_regression_testing
+      hardware:
+        gpu_type: NVIDIA RTX 2080 Super
+        vram_gb: 8
+        cpu_cores: 12
+        ram_gb: 64
+        storage_type: High-speed NVMe SSD
+        network_role: QA Testing Environment
+      performance_targets:
+        min_tokens_per_second: 4.0
+        max_response_time_ms: 30000
+        target_availability: 0.95
+    oak_agent:
+      name: OAK iOS/macOS Development Specialist
+      endpoint: http://oak.local:11434
+      model: mistral-nemo:latest
+      specialization: iOS/macOS Development & Apple Ecosystem
+      capabilities:
+      - ios_development
+      - macos_development
+      - swift_programming
+      - objective_c_development
+      - xcode_automation
+      - app_store_deployment
+      - core_data_management
+      - swiftui_development
+      - uikit_development
+      - apple_framework_integration
+      - code_signing
+      - mobile_app_architecture
+      hardware:
+        gpu_type: Intel Iris Plus Graphics
+        vram_gb: 1.5
+        cpu_cores: 8
+        ram_gb: 16
+        storage_type: 932GB SSD
+        network_role: iOS/macOS Development Workstation
+        platform: macOS 15.5
+        xcode_version: '16.4'
+      performance_targets:
+        min_tokens_per_second: 2.5
+        max_response_time_ms: 35000
+        target_availability: 0.9
+    tully_agent:
+      name: TULLY MacBook Air Development Specialist
+      endpoint: http://Tullys-MacBook-Air.local:11434
+      model: mistral-nemo:latest
+      specialization: Mobile Development & Apple Ecosystem
+      capabilities:
+      - ios_development
+      - macos_development
+      - swift_programming
+      - mobile_app_development
+      - xcode_automation
+      - unity_development
+      - game_development
+      - app_store_deployment
+      - swiftui_development
+      - uikit_development
+      - apple_framework_integration
+      hardware:
+        gpu_type: Apple M-series
+        vram_gb: 8
+        cpu_cores: 8
+        ram_gb: 16
+        storage_type: SSD
+        network_role: Development Workstation
+        platform: macOS 15.5
+      performance_targets:
+        min_tokens_per_second: 3.0
+        max_response_time_ms: 30000
+        target_availability: 0.9
+  monitoring:
+    metrics_retention_days: 30
+    alert_thresholds:
+      cpu_usage: 85
+      memory_usage: 90
+      gpu_usage: 95
+      response_time: 60
+    health_check_interval: 30
+  workflows:
+    templates:
+      web_development:
+        agents:
+        - walnut
+        - ironwood
+        stages:
+        - planning
+        - frontend
+        - backend
+        - integration
+        - testing
+      infrastructure:
+        agents:
+        - acacia
+        - ironwood
+        stages:
+        - design
+        - provisioning
+        - deployment
+        - monitoring
+  mcp_servers:
+    registry:
+      comfyui: ws://localhost:8188/api/mcp
+      code_review: http://localhost:8000/mcp
+  security:
+    require_approval: true
+    api_rate_limit: 100
+    session_timeout: 3600

@@ -1,0 +1,67 @@
+{
+  "migration_summary": {
+    "timestamp": "2025-07-06T23:32:44.299586",
+    "source_projects": [
+      "distributed-ai-dev",
+      "mcplan",
+      "cluster",
+      "n8n-integration"
+    ],
+    "hive_version": "1.0.0",
+    "migration_status": "completed_with_errors"
+  },
+  "components_migrated": {
+    "agent_configurations": "config/hive.yaml",
+    "monitoring_configs": "config/monitoring/",
+    "database_schema": "backend/migrations/001_initial_schema.sql",
+    "core_components": "backend/app/core/",
+    "api_endpoints": "backend/app/api/",
+    "frontend_components": "frontend/src/components/",
+    "workflows": "config/workflows/"
+  },
+  "next_steps": [
+    "Review and update imported configurations",
+    "Set up development environment with docker-compose up",
+    "Run database migrations",
+    "Test agent connectivity",
+    "Verify workflow execution",
+    "Configure monitoring and alerting",
+    "Update documentation"
+  ],
+  "migration_log": [
+    "[2025-07-06 23:32:44] INFO: \ud83d\ude80 Starting Hive migration from existing projects",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc1 Setting up Hive project structure",
+    "[2025-07-06 23:32:44] INFO: Created 28 directories",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udd0d Validating source projects",
+    "[2025-07-06 23:32:44] INFO: \u2705 Found distributed-ai-dev at /home/tony/AI/projects/distributed-ai-dev",
+    "[2025-07-06 23:32:44] INFO: \u2705 Found mcplan at /home/tony/AI/projects/McPlan",
+    "[2025-07-06 23:32:44] ERROR: \u274c Missing cluster at /home/tony/AI/projects/cluster",
+    "[2025-07-06 23:32:44] INFO: \u2705 Found n8n-integration at /home/tony/AI/projects/n8n-integration",
+    "[2025-07-06 23:32:44] INFO: \ud83e\udd16 Migrating agent configurations",
+    "[2025-07-06 23:32:44] INFO: \u2705 Migrated 6 agent configurations",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcca Migrating monitoring configurations",
+    "[2025-07-06 23:32:44] INFO: \u2705 Created monitoring configurations",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udd27 Extracting core components",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc4 Copied ai_dev_coordinator.py",
+    "[2025-07-06 23:32:44] INFO: \u26a0\ufe0f  Could not find source: distributed-ai-dev/src/monitoring/performance_monitor.py",
+    "[2025-07-06 23:32:44] INFO: \u26a0\ufe0f  Could not find source: distributed-ai-dev/src/config/agent_manager.py",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc4 Copied mcplan_engine.py",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc4 Copied workflows.py",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc4 Copied execution.py",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc4 Copied workflow.py",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc1 Copied directory WorkflowEditor",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc1 Copied directory ExecutionPanel",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcc1 Copied directory stores",
+    "[2025-07-06 23:32:44] INFO: \u2705 Core components extracted",
+    "[2025-07-06 23:32:44] INFO: \ud83d\uddc4\ufe0f  Creating unified database schema",
+    "[2025-07-06 23:32:44] INFO: \u2705 Database schema created",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udd04 Migrating workflows",
+    "[2025-07-06 23:32:44] INFO: \u2705 Migrated 0 workflows",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udcca Migrating execution history",
+    "[2025-07-06 23:32:44] INFO: \u26a0\ufe0f  No McPlan database found, skipping execution history",
+    "[2025-07-06 23:32:44] INFO: \ud83d\udccb Generating migration report"
+  ],
+  "errors": [
+    "\u274c Missing cluster at /home/tony/AI/projects/cluster"
+  ]
+}
