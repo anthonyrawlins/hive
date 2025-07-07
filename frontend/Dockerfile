@@ -6,13 +6,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (including dev deps for build)
-RUN npm install
+RUN npm install && npm install -g serve
 
 # Copy source code
 COPY . .
 
 # Build the application
 RUN npm run build
+
+# Install curl for health checks (as root)
+RUN apk add --no-cache curl
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
@@ -29,5 +32,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000 || exit 1
 
-# Start the application  
-CMD ["npm", "run", "preview"]
+# Start the application using serve for production  
+CMD ["serve", "-s", "dist", "-l", "3000"]
