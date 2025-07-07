@@ -30,6 +30,23 @@ npm run build
 
 Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
+**Production (Swarm Deployment):**
+```json
+{
+  "mcpServers": {
+    "hive": {
+      "command": "node",
+      "args": ["/path/to/hive/mcp-server/dist/index.js"],
+      "env": {
+        "HIVE_API_URL": "https://hive.home.deepblack.cloud",
+        "HIVE_WS_URL": "wss://hive.home.deepblack.cloud"
+      }
+    }
+  }
+}
+```
+
+**Development/Local Testing:**
 ```json
 {
   "mcpServers": {
@@ -123,10 +140,22 @@ Use parallel coordination where possible.
 What's the current status of my Hive cluster? Show me agent utilization and recent task performance.
 ```
 
-## Environment Variables
+## Configuration
 
-- **`HIVE_API_URL`** - Hive backend API URL (default: `http://localhost:8087`)
-- **`HIVE_WS_URL`** - Hive WebSocket URL (default: `ws://localhost:8087`)
+The MCP server connects to the Hive backend using domain endpoints by default. You can customize this by setting environment variables:
+
+**Production (Default):**
+- **`HIVE_API_URL`** - `https://hive.home.deepblack.cloud`
+- **`HIVE_WS_URL`** - `wss://hive.home.deepblack.cloud`
+
+**Development/Local Testing:**
+- **`HIVE_API_URL`** - `http://localhost:8087`
+- **`HIVE_WS_URL`** - `ws://localhost:8087`
+
+**Additional Options:**
+- **`HIVE_TIMEOUT`** - Request timeout in milliseconds (default: `30000`)
+
+Copy `.env.example` to `.env` and modify as needed for your deployment.
 
 ## Development
 

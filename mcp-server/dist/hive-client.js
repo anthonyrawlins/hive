@@ -11,9 +11,9 @@ export class HiveClient {
     wsConnection;
     constructor(config) {
         this.config = {
-            baseUrl: process.env.HIVE_API_URL || 'http://localhost:8087',
-            wsUrl: process.env.HIVE_WS_URL || 'ws://localhost:8087',
-            timeout: 30000,
+            baseUrl: process.env.HIVE_API_URL || 'https://hive.home.deepblack.cloud',
+            wsUrl: process.env.HIVE_WS_URL || 'wss://hive.home.deepblack.cloud',
+            timeout: parseInt(process.env.HIVE_TIMEOUT || '30000'),
             ...config,
         };
         this.api = axios.create({

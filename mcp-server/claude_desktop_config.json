@@ -4,8 +4,8 @@
       "command": "node",
       "args": ["/home/tony/AI/projects/hive/mcp-server/dist/index.js"],
       "env": {
-        "HIVE_API_URL": "http://localhost:8087",
-        "HIVE_WS_URL": "ws://localhost:8087"
+        "HIVE_API_URL": "https://hive.home.deepblack.cloud",
+        "HIVE_WS_URL": "wss://hive.home.deepblack.cloud"
       }
     }
   }
