@@ -1,0 +1,248 @@
+import axios from 'axios';
+import { Project, CreateProjectRequest, UpdateProjectRequest, ProjectMetrics } from '../types/project';
+import { Workflow, WorkflowExecution } from '../types/workflow';
+
+// Create axios instance with base configuration
+const api = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor for authentication (if needed)
+api.interceptors.request.use(
+  (config) => {
+    // Add auth token if available
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Handle unauthorized access
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Project API
+export const projectApi = {
+  // Get all projects
+  getProjects: async (): Promise<Project[]> => {
+    const response = await api.get('/projects');
+    return response.data;
+  },
+
+  // Get a single project by ID
+  getProject: async (id: string): Promise<Project> => {
+    const response = await api.get(`/projects/${id}`);
+    return response.data;
+  },
+
+  // Create a new project
+  createProject: async (data: CreateProjectRequest): Promise<Project> => {
+    const response = await api.post('/projects', data);
+    return response.data;
+  },
+
+  // Update a project
+  updateProject: async (id: string, data: UpdateProjectRequest): Promise<Project> => {
+    const response = await api.put(`/projects/${id}`, data);
+    return response.data;
+  },
+
+  // Delete a project
+  deleteProject: async (id: string): Promise<void> => {
+    await api.delete(`/projects/${id}`);
+  },
+
+  // Get project metrics
+  getProjectMetrics: async (id: string): Promise<ProjectMetrics> => {
+    const response = await api.get(`/projects/${id}/metrics`);
+    return response.data;
+  },
+
+  // Get project workflows
+  getProjectWorkflows: async (id: string): Promise<Workflow[]> => {
+    const response = await api.get(`/projects/${id}/workflows`);
+    return response.data;
+  },
+
+  // Get project executions
+  getProjectExecutions: async (id: string): Promise<WorkflowExecution[]> => {
+    const response = await api.get(`/projects/${id}/executions`);
+    return response.data;
+  },
+};
+
+// Workflow API
+export const workflowApi = {
+  // Get all workflows
+  getWorkflows: async (): Promise<Workflow[]> => {
+    const response = await api.get('/workflows');
+    return response.data;
+  },
+
+  // Get a single workflow by ID
+  getWorkflow: async (id: string): Promise<Workflow> => {
+    const response = await api.get(`/workflows/${id}`);
+    return response.data;
+  },
+
+  // Create a new workflow
+  createWorkflow: async (data: Partial<Workflow>): Promise<Workflow> => {
+    const response = await api.post('/workflows', data);
+    return response.data;
+  },
+
+  // Update a workflow
+  updateWorkflow: async (id: string, data: Partial<Workflow>): Promise<Workflow> => {
+    const response = await api.put(`/workflows/${id}`, data);
+    return response.data;
+  },
+
+  // Delete a workflow
+  deleteWorkflow: async (id: string): Promise<void> => {
+    await api.delete(`/workflows/${id}`);
+  },
+
+  // Execute a workflow
+  executeWorkflow: async (id: string, input?: any): Promise<WorkflowExecution> => {
+    const response = await api.post(`/workflows/${id}/execute`, { input });
+    return response.data;
+  },
+
+  // Get workflow executions
+  getWorkflowExecutions: async (id: string): Promise<WorkflowExecution[]> => {
+    const response = await api.get(`/workflows/${id}/executions`);
+    return response.data;
+  },
+};
+
+// Execution API
+export const executionApi = {
+  // Get all executions
+  getExecutions: async (): Promise<WorkflowExecution[]> => {
+    const response = await api.get('/executions');
+    return response.data;
+  },
+
+  // Get a single execution by ID
+  getExecution: async (id: string): Promise<WorkflowExecution> => {
+    const response = await api.get(`/executions/${id}`);
+    return response.data;
+  },
+
+  // Cancel an execution
+  cancelExecution: async (id: string): Promise<void> => {
+    await api.post(`/executions/${id}/cancel`);
+  },
+
+  // Retry an execution
+  retryExecution: async (id: string): Promise<WorkflowExecution> => {
+    const response = await api.post(`/executions/${id}/retry`);
+    return response.data;
+  },
+};
+
+// Agent API
+export const agentApi = {
+  // Get all agents
+  getAgents: async () => {
+    const response = await api.get('/agents');
+    return response.data;
+  },
+
+  // Get agent status
+  getAgentStatus: async (id: string) => {
+    const response = await api.get(`/agents/${id}/status`);
+    return response.data;
+  },
+
+  // Register new agent
+  registerAgent: async (agentData: any) => {
+    const response = await api.post('/agents', agentData);
+    return response.data;
+  },
+};
+
+// System API
+export const systemApi = {
+  // Get system status
+  getStatus: async () => {
+    const response = await api.get('/status');
+    return response.data;
+  },
+
+  // Get system health
+  getHealth: async () => {
+    const response = await api.get('/health');
+    return response.data;
+  },
+
+  // Get system metrics
+  getMetrics: async () => {
+    const response = await api.get('/metrics');
+    return response.data;
+  },
+};
+
+// Cluster API
+export const clusterApi = {
+  // Get cluster overview
+  getOverview: async () => {
+    const response = await api.get('/cluster/overview');
+    return response.data;
+  },
+
+  // Get cluster nodes
+  getNodes: async () => {
+    const response = await api.get('/cluster/nodes');
+    return response.data;
+  },
+
+  // Get node details
+  getNode: async (nodeId: string) => {
+    const response = await api.get(`/cluster/nodes/${nodeId}`);
+    return response.data;
+  },
+
+  // Get available models
+  getModels: async () => {
+    const response = await api.get('/cluster/models');
+    return response.data;
+  },
+
+  // Get n8n workflows
+  getWorkflows: async () => {
+    const response = await api.get('/cluster/workflows');
+    return response.data;
+  },
+
+  // Get cluster metrics
+  getMetrics: async () => {
+    const response = await api.get('/cluster/metrics');
+    return response.data;
+  },
+
+  // Get workflow executions
+  getExecutions: async (limit: number = 10) => {
+    const response = await api.get(`/cluster/executions?limit=${limit}`);
+    return response.data;
+  },
+};
+
+export default api;

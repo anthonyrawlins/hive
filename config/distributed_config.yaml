@@ -1,0 +1,298 @@
+# Distributed Hive Configuration
+# Enhanced configuration for cluster-wide distributed development workflows
+
+distributed:
+  enabled: true
+  coordinator:
+    redis_url: "redis://localhost:6379"
+    max_concurrent_workflows: 50
+    task_timeout: 300  # 5 minutes
+    health_check_interval: 30  # seconds
+    optimization_interval: 300  # 5 minutes
+    
+  # Cluster node configuration based on CLUSTER_INFO.md
+  agents:
+    ACACIA:
+      endpoint: "http://192.168.1.72:11434"
+      model: "deepseek-r1:7b"
+      gpu_type: "NVIDIA GTX 1070"
+      vram_gb: 8
+      specializations:
+        - "deployment"
+        - "documentation"
+        - "infrastructure"
+      max_concurrent: 2
+      priority_weight: 1.0
+      features:
+        - "docker_deployment"
+        - "nfs_storage"
+        - "anythingllm_rag"
+      
+    WALNUT:
+      endpoint: "http://192.168.1.27:11434"
+      model: "starcoder2:15b"
+      gpu_type: "AMD RX 9060 XT"
+      vram_gb: 16
+      specializations:
+        - "code_generation"
+        - "optimization"
+        - "full_stack_development"
+      max_concurrent: 4
+      priority_weight: 1.2
+      features:
+        - "large_model_support"
+        - "swarm_manager"
+        - "comprehensive_models"
+        
+    IRONWOOD:
+      endpoint: "http://192.168.1.113:11434"
+      model: "deepseek-coder-v2"
+      gpu_type: "Quad-GPU (2x GTX 1070 + 2x Tesla P4)"
+      vram_gb: 32
+      specializations:
+        - "code_generation"
+        - "compilation"
+        - "backend_development"
+        - "large_model_inference"
+      max_concurrent: 8
+      priority_weight: 2.0  # Highest priority due to quad-GPU setup
+      features:
+        - "multi_gpu_ollama"
+        - "maximum_vram"
+        - "high_throughput"
+        - "batch_processing"
+        
+    ROSEWOOD:
+      endpoint: "http://192.168.1.132:11435"  # Multi-GPU Ollama port
+      model: "deepseek-r1:8b"
+      gpu_type: "Dual-GPU (RTX 2080 Super + RTX 3070)"
+      vram_gb: 16
+      specializations:
+        - "testing"
+        - "code_review"
+        - "quality_assurance"
+      max_concurrent: 6
+      priority_weight: 1.5
+      features:
+        - "multi_gpu_ollama"
+        - "tensor_parallelism"
+        - "unity_development"
+        - "blender_support"
+        
+    FORSTEINET:
+      endpoint: "http://192.168.1.106:11434"
+      model: "devstral"
+      gpu_type: "AMD Radeon RX Vega 56/64"
+      vram_gb: 8
+      specializations:
+        - "testing"
+        - "optimization"
+        - "specialized_compute"
+      max_concurrent: 2
+      priority_weight: 0.8
+      features:
+        - "amd_gpu_compute"
+        - "specialized_tasks"
+
+  # Task routing configuration
+  task_routing:
+    code_generation:
+      preferred_agents: ["IRONWOOD", "WALNUT", "ROSEWOOD"]
+      fallback_agents: ["ACACIA", "FORSTEINET"]
+      min_vram_gb: 8
+      
+    code_review:
+      preferred_agents: ["ROSEWOOD", "WALNUT", "IRONWOOD"]
+      fallback_agents: ["ACACIA", "FORSTEINET"]
+      min_vram_gb: 4
+      
+    testing:
+      preferred_agents: ["ROSEWOOD", "FORSTEINET", "ACACIA"]
+      fallback_agents: ["WALNUT", "IRONWOOD"]
+      min_vram_gb: 4
+      
+    compilation:
+      preferred_agents: ["IRONWOOD", "WALNUT"]
+      fallback_agents: ["ACACIA", "ROSEWOOD", "FORSTEINET"]
+      min_vram_gb: 8
+      
+    optimization:
+      preferred_agents: ["WALNUT", "FORSTEINET", "IRONWOOD"]
+      fallback_agents: ["ROSEWOOD", "ACACIA"]
+      min_vram_gb: 8
+      
+    documentation:
+      preferred_agents: ["ACACIA", "WALNUT"]
+      fallback_agents: ["ROSEWOOD", "IRONWOOD", "FORSTEINET"]
+      min_vram_gb: 4
+      
+    deployment:
+      preferred_agents: ["ACACIA", "WALNUT"]
+      fallback_agents: ["IRONWOOD", "ROSEWOOD"]
+      min_vram_gb: 4
+
+  # Performance optimization settings
+  performance:
+    connection_pooling:
+      max_connections: 10
+      timeout: 30
+      keepalive: true
+      
+    caching:
+      enabled: true
+      ttl: 3600  # 1 hour
+      max_size: "1GB"
+      
+    load_balancing:
+      algorithm: "weighted_round_robin"
+      health_check_weight: 0.3
+      performance_weight: 0.4
+      load_weight: 0.3
+      
+    auto_scaling:
+      enabled: true
+      scale_up_threshold: 0.8
+      scale_down_threshold: 0.3
+      cooldown_period: 300  # 5 minutes
+
+  # Monitoring and metrics
+  monitoring:
+    prometheus:
+      enabled: true
+      port: 9090
+      
+    metrics:
+      - task_duration
+      - task_throughput
+      - agent_utilization
+      - error_rates
+      - queue_depth
+      
+    alerts:
+      agent_down_threshold: 2  # Alert if agent down for 2 minutes
+      high_queue_threshold: 50  # Alert if queue has >50 pending tasks
+      error_rate_threshold: 0.1  # Alert if error rate >10%
+
+  # Workflow templates
+  workflow_templates:
+    full_stack_app:
+      name: "Full Stack Application"
+      description: "Complete full-stack development workflow"
+      tasks:
+        - type: "code_generation"
+          description: "Generate backend API and frontend components"
+          estimated_duration: 600  # 10 minutes
+          
+        - type: "code_review"
+          description: "Review generated code for quality and security"
+          estimated_duration: 300  # 5 minutes
+          dependencies: ["code_generation"]
+          
+        - type: "testing"
+          description: "Generate and run comprehensive test suite"
+          estimated_duration: 480  # 8 minutes
+          dependencies: ["code_review"]
+          
+        - type: "compilation"
+          description: "Build and package application"
+          estimated_duration: 240  # 4 minutes
+          dependencies: ["testing"]
+          
+        - type: "optimization"
+          description: "Optimize performance and bundle size"
+          estimated_duration: 360  # 6 minutes
+          dependencies: ["compilation"]
+          
+        - type: "documentation"
+          description: "Generate API docs and deployment guide"
+          estimated_duration: 180  # 3 minutes
+          dependencies: ["optimization"]
+          
+    api_development:
+      name: "REST API Development"
+      description: "Backend API development with testing and docs"
+      tasks:
+        - type: "code_generation"
+          description: "Generate REST API endpoints and models"
+          estimated_duration: 480
+          
+        - type: "code_review"
+          description: "Security and architecture review"
+          estimated_duration: 240
+          dependencies: ["code_generation"]
+          
+        - type: "testing"
+          description: "API testing suite with integration tests"
+          estimated_duration: 360
+          dependencies: ["code_review"]
+          
+        - type: "documentation"
+          description: "OpenAPI/Swagger documentation"
+          estimated_duration: 180
+          dependencies: ["testing"]
+
+# Integration settings
+integration:
+  mcp:
+    enabled: true
+    server_name: "distributed-hive"
+    
+  api:
+    enabled: true
+    prefix: "/api/distributed"
+    cors_origins: ["*"]
+    
+  ui:
+    enabled: true
+    auto_refresh_interval: 10  # seconds
+    max_workflow_history: 100
+
+# Security settings
+security:
+  authentication:
+    required: false  # Enable for production
+    
+  authorization:
+    rbac_enabled: false  # Enable for production
+    
+  network:
+    allowed_hosts: ["192.168.1.0/24", "localhost"]
+    ssl_required: false  # Enable for production
+    
+  secrets:
+    encryption_enabled: false  # Enable for production
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  handlers:
+    console:
+      enabled: true
+      level: "INFO"
+      
+    file:
+      enabled: true
+      level: "DEBUG"
+      filename: "logs/distributed_hive.log"
+      max_size: "100MB"
+      backup_count: 5
+      
+    syslog:
+      enabled: false  # Enable for production
+      facility: "local0"
+
+# Development settings
+development:
+  debug_mode: true
+  hot_reload: true
+  verbose_logging: true
+  
+  testing:
+    mock_agents: false
+    simulate_failures: false
+    
+  profiling:
+    enabled: true
+    output_dir: "profiles/"
