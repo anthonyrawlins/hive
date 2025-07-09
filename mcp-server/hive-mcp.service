@@ -1,0 +1,52 @@
+[Unit]
+Description=Hive MCP Server - Distributed AI Orchestration
+Documentation=https://github.com/anthropics/hive-mcp-server
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=30
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=tony
+Group=tony
+WorkingDirectory=/home/tony/AI/projects/hive/mcp-server
+
+# Environment variables
+Environment=NODE_ENV=production
+Environment=HIVE_API_URL=https://hive.home.deepblack.cloud/api
+Environment=HIVE_WS_URL=wss://hive.home.deepblack.cloud/socket.io
+Environment=LOG_LEVEL=info
+Environment=AUTO_DISCOVERY=true
+Environment=DISCOVERY_INTERVAL=300000
+
+# Main service command
+ExecStart=/usr/bin/node dist/index.js --daemon
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=always
+RestartSec=10
+TimeoutStartSec=30
+TimeoutStopSec=15
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/tony/AI/projects/hive/mcp-server/logs
+ReadWritePaths=/home/tony/AI/projects/hive/mcp-server/data
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=512M
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hive-mcp
+
+[Install]
+WantedBy=multi-user.target

@@ -16,6 +16,8 @@ class HiveMCPServer {
     hiveClient;
     hiveTools;
     hiveResources;
+    discoveryInterval;
+    isDaemonMode = false;
     constructor() {
         this.server = new Server({
             name: 'hive-mcp-server',
@@ -58,12 +60,23 @@ class HiveMCPServer {
             console.error('[MCP Server Error]:', error);
         };
         process.on('SIGINT', async () => {
-            await this.server.close();
-            process.exit(0);
+            await this.shutdown();
+        });
+        process.on('SIGTERM', async () => {
+            await this.shutdown();
+        });
+        process.on('SIGHUP', async () => {
+            console.log('🔄 Received SIGHUP, triggering agent discovery...');
+            await this.autoDiscoverAgents();
         });
     }
     async start() {
         console.log('🐝 Starting Hive MCP Server...');
+        // Check for daemon mode
+        this.isDaemonMode = process.argv.includes('--daemon');
+        if (this.isDaemonMode) {
+            console.log('🔧 Running in daemon mode');
+        }
         // Test connection to Hive backend
         try {
             await this.hiveClient.testConnection();
@@ -82,10 +95,38 @@ class HiveMCPServer {
         catch (error) {
             console.warn('⚠️  Auto-discovery failed, continuing without it:', error);
         }
-        const transport = new StdioServerTransport();
-        await this.server.connect(transport);
-        console.log('🚀 Hive MCP Server running on stdio');
-        console.log('🔗 AI assistants can now orchestrate your distributed cluster!');
+        // Set up periodic auto-discovery if enabled
+        if (this.isDaemonMode && process.env.AUTO_DISCOVERY !== 'false') {
+            this.setupPeriodicDiscovery();
+        }
+        if (this.isDaemonMode) {
+            console.log('🚀 Hive MCP Server running in daemon mode');
+            console.log('🔗 Monitoring cluster and auto-discovering agents...');
+            // Keep the process alive in daemon mode
+            setInterval(() => {
+                // Health check - could add cluster monitoring here
+            }, 30000);
+        }
+        else {
+            const transport = new StdioServerTransport();
+            await this.server.connect(transport);
+            console.log('🚀 Hive MCP Server running on stdio');
+            console.log('🔗 AI assistants can now orchestrate your distributed cluster!');
+        }
+    }
+    setupPeriodicDiscovery() {
+        const interval = parseInt(process.env.DISCOVERY_INTERVAL || '300000', 10); // Default 5 minutes
+        console.log(`🔄 Setting up periodic auto-discovery every ${interval / 1000} seconds`);
+        this.discoveryInterval = setInterval(async () => {
+            console.log('🔍 Periodic agent auto-discovery...');
+            try {
+                await this.autoDiscoverAgents();
+                console.log('✅ Periodic auto-discovery completed');
+            }
+            catch (error) {
+                console.warn('⚠️  Periodic auto-discovery failed:', error);
+            }
+        }, interval);
     }
     async autoDiscoverAgents() {
         // Use the existing hive_bring_online functionality
@@ -96,6 +137,16 @@ class HiveMCPServer {
         if (result.isError) {
             throw new Error(`Auto-discovery failed: ${result.content[0]?.text || 'Unknown error'}`);
         }
+    }
+    async shutdown() {
+        console.log('🛑 Shutting down Hive MCP Server...');
+        if (this.discoveryInterval) {
+            clearInterval(this.discoveryInterval);
+            console.log('✅ Stopped periodic auto-discovery');
+        }
+        await this.server.close();
+        console.log('✅ Hive MCP Server stopped');
+        process.exit(0);
     }
 }
 // Start the server

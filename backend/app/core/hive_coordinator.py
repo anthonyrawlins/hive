@@ -11,6 +11,9 @@ import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 from enum import Enum
+from sqlalchemy.orm import Session
+from ..models.agent import Agent as ORMAgent
+from ..core.database import SessionLocal
 
 class AgentType(Enum):
     KERNEL_DEV = "kernel_dev"
@@ -48,9 +51,8 @@ class Task:
     created_at: float = None
     completed_at: Optional[float] = None
 
-class AIDevCoordinator:
+class HiveCoordinator:
     def __init__(self):
-        self.agents: Dict[str, Agent] = {}
         self.tasks: Dict[str, Task] = {}
         self.task_queue: List[Task] = []
         self.is_initialized = False
@@ -89,9 +91,20 @@ FOCUS:[full-coverage]→[test+measure+handle+automate]"""
         }
     
     def add_agent(self, agent: Agent):
-        """Register a new agent"""
-        self.agents[agent.id] = agent
-        print(f"Registered agent {agent.id} ({agent.specialty.value}) at {agent.endpoint}")
+        """Register a new agent and persist to database"""
+        with SessionLocal() as db:
+            db_agent = ORMAgent(
+                id=agent.id,
+                endpoint=agent.endpoint,
+                model=agent.model,
+                specialty=agent.specialty.value,
+                max_concurrent=agent.max_concurrent,
+                current_tasks=agent.current_tasks
+            )
+            db.add(db_agent)
+            db.commit()
+            db.refresh(db_agent)
+            print(f"Registered agent {agent.id} ({agent.specialty.value}) at {agent.endpoint} and persisted to DB")
     
     def create_task(self, task_type: AgentType, context: Dict, priority: int = 3) -> Task:
         """Create a new development task"""
@@ -111,16 +124,37 @@ FOCUS:[full-coverage]→[test+measure+handle+automate]"""
         return task
     
     def get_available_agent(self, task_type: AgentType) -> Optional[Agent]:
-        """Find an available agent for the task type"""
-        available_agents = [
-            agent for agent in self.agents.values()
-            if agent.specialty == task_type and agent.current_tasks < agent.max_concurrent
-        ]
-        return available_agents[0] if available_agents else None
+        """Find an available agent for the task type from the database"""
+        with SessionLocal() as db:
+            available_agents_orm = db.query(ORMAgent).filter(
+                ORMAgent.specialty == task_type.value,
+                ORMAgent.current_tasks < ORMAgent.max_concurrent
+            ).all()
+            
+            if available_agents_orm:
+                # Convert ORM agent to dataclass Agent
+                db_agent = available_agents_orm[0]
+                return Agent(
+                    id=db_agent.id,
+                    endpoint=db_agent.endpoint,
+                    model=db_agent.model,
+                    specialty=AgentType(db_agent.specialty),
+                    max_concurrent=db_agent.max_concurrent,
+                    current_tasks=db_agent.current_tasks
+                )
+            return None
     
     async def execute_task(self, task: Task, agent: Agent) -> Dict:
-        """Execute a task on a specific agent"""
-        agent.current_tasks += 1
+        """Execute a task on a specific agent with improved error handling"""
+        with SessionLocal() as db:
+            db_agent = db.query(ORMAgent).filter(ORMAgent.id == agent.id).first()
+            if db_agent:
+                db_agent.current_tasks += 1
+                db.add(db_agent)
+                db.commit()
+                db.refresh(db_agent)
+                agent.current_tasks = db_agent.current_tasks # Update in-memory object
+            
         task.status = TaskStatus.IN_PROGRESS
         task.assigned_agent = agent.id
         
@@ -146,18 +180,32 @@ Complete task → respond JSON format specified above."""
         }
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(f"{agent.endpoint}/api/generate", json=payload) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        task.result = result
-                        task.status = TaskStatus.COMPLETED
-                        task.completed_at = time.time()
-                        print(f"Task {task.id} completed by {agent.id}")
-                        return result
-                    else:
-                        raise Exception(f"HTTP {response.status}: {await response.text()}")
+            # Use the session initialized in the coordinator
+            session = getattr(self, 'session', None)
+            if not session:
+                raise Exception("HTTP session not initialized")
+            
+            async with session.post(
+                f"{agent.endpoint}/api/generate", 
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=300)  # 5 minute timeout for AI tasks
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    task.result = result
+                    task.status = TaskStatus.COMPLETED
+                    task.completed_at = time.time()
+                    print(f"Task {task.id} completed by {agent.id}")
+                    return result
+                else:
+                    error_text = await response.text()
+                    raise Exception(f"HTTP {response.status}: {error_text}")
         
+        except asyncio.TimeoutError:
+            task.status = TaskStatus.FAILED
+            task.result = {"error": "Task execution timeout"}
+            print(f"Task {task.id} timed out on {agent.id}")
+            return {"error": "Task execution timeout"}
         except Exception as e:
             task.status = TaskStatus.FAILED
             task.result = {"error": str(e)}
@@ -165,7 +213,14 @@ Complete task → respond JSON format specified above."""
             return {"error": str(e)}
         
         finally:
-            agent.current_tasks -= 1
+            with SessionLocal() as db:
+                db_agent = db.query(ORMAgent).filter(ORMAgent.id == agent.id).first()
+                if db_agent:
+                    db_agent.current_tasks -= 1
+                    db.add(db_agent)
+                    db.commit()
+                    db.refresh(db_agent)
+                    agent.current_tasks = db_agent.current_tasks # Update in-memory object
     
     async def process_queue(self):
         """Process the task queue with available agents"""
@@ -246,8 +301,10 @@ Complete task → respond JSON format specified above."""
         completion_rate = completed / total_tasks if total_tasks > 0 else 0
         
         agent_vectors = {}
-        for agent in self.agents.values():
-            agent_vectors[agent.id] = f"[{agent.specialty.value}@{agent.current_tasks}/{agent.max_concurrent}]"
+        with SessionLocal() as db:
+            db_agents = db.query(ORMAgent).all()
+            for agent in db_agents:
+                agent_vectors[agent.id] = f"[{agent.specialty}@{agent.current_tasks}/{agent.max_concurrent}]"
         
         return {
             "status_vector": status_vector,
@@ -259,26 +316,94 @@ Complete task → respond JSON format specified above."""
             "failed": failed,
             "in_progress": in_progress,
             "pending": total_tasks - completed - failed - in_progress,
-            "agents": {agent.id: agent.current_tasks for agent in self.agents.values()}
+            "agents": {agent.id: agent.current_tasks for agent in db_agents}
         }
 
     async def initialize(self):
-        """Initialize the coordinator"""
-        print("Initializing Hive Coordinator...")
-        self.is_initialized = True
-        print("✅ Hive Coordinator initialized")
+        """Initialize the coordinator with proper error handling"""
+        try:
+            print("Initializing Hive Coordinator...")
+            
+            # Initialize HTTP client session with timeouts
+            self.session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=30, connect=10),
+                connector=aiohttp.TCPConnector(
+                    limit=100,
+                    limit_per_host=30,
+                    ttl_dns_cache=300,
+                    use_dns_cache=True
+                )
+            )
+            
+            # Initialize task processing
+            self.task_processor = None
+            
+            # Test connectivity to any configured agents
+            await self._test_initial_connectivity()
+            
+            self.is_initialized = True
+            print("✅ Hive Coordinator initialized")
+            
+        except Exception as e:
+            print(f"❌ Coordinator initialization failed: {e}")
+            self.is_initialized = False
+            # Clean up any partial initialization
+            if hasattr(self, 'session') and self.session:
+                await self.session.close()
+            raise
 
     async def shutdown(self):
-        """Shutdown the coordinator"""
+        """Enhanced shutdown with proper cleanup"""
         print("Shutting down Hive Coordinator...")
-        self.is_initialized = False
-        print("✅ Hive Coordinator shutdown")
+        
+        try:
+            # Cancel any running tasks
+            running_tasks = [task for task in self.tasks.values() if task.status == TaskStatus.IN_PROGRESS]
+            if running_tasks:
+                print(f"Canceling {len(running_tasks)} running tasks...")
+                for task in running_tasks:
+                    task.status = TaskStatus.FAILED
+                    task.result = {"error": "Coordinator shutdown"}
+            
+            # Close HTTP session
+            if hasattr(self, 'session') and self.session:
+                await self.session.close()
+            
+            # Stop task processor
+            if hasattr(self, 'task_processor') and self.task_processor:
+                self.task_processor.cancel()
+                try:
+                    await self.task_processor
+                except asyncio.CancelledError:
+                    pass
+            
+            self.is_initialized = False
+            print("✅ Hive Coordinator shutdown")
+            
+        except Exception as e:
+            print(f"❌ Shutdown error: {e}")
+            self.is_initialized = False
+
+    async def _test_initial_connectivity(self):
+        """Test initial connectivity to prevent startup issues"""
+        # This would test any pre-configured agents
+        # For now, just ensure we can make HTTP requests
+        try:
+            async with self.session.get('http://httpbin.org/get', timeout=5) as response:
+                if response.status == 200:
+                    print("✅ HTTP connectivity test passed")
+        except Exception as e:
+            print(f"⚠️ HTTP connectivity test failed: {e}")
+            # Don't fail initialization for this, just warn
 
     async def get_health_status(self):
         """Get health status"""
+        with SessionLocal() as db:
+            db_agents = db.query(ORMAgent).all()
+            agents_status = {agent.id: "available" for agent in db_agents}
         return {
             "status": "healthy" if self.is_initialized else "unhealthy",
-            "agents": {agent.id: "available" for agent in self.agents.values()},
+            "agents": agents_status,
             "tasks": {
                 "pending": len([t for t in self.tasks.values() if t.status == TaskStatus.PENDING]),
                 "running": len([t for t in self.tasks.values() if t.status == TaskStatus.IN_PROGRESS]),
@@ -289,6 +414,12 @@ Complete task → respond JSON format specified above."""
 
     async def get_comprehensive_status(self):
         """Get comprehensive system status"""
+        with SessionLocal() as db:
+            db_agents = db.query(ORMAgent).all()
+            total_agents = len(db_agents)
+            available_agents = len([a for a in db_agents if a.current_tasks < a.max_concurrent])
+            busy_agents = len([a for a in db_agents if a.current_tasks >= a.max_concurrent])
+
         return {
             "system": {
                 "status": "operational" if self.is_initialized else "initializing",
@@ -296,9 +427,19 @@ Complete task → respond JSON format specified above."""
                 "version": "1.0.0"
             },
             "agents": {
-                "total": len(self.agents),
-                "available": len([a for a in self.agents.values() if a.current_tasks < a.max_concurrent]),
-                "busy": len([a for a in self.agents.values() if a.current_tasks >= a.max_concurrent])
+                "total": total_agents,
+                "available": available_agents,
+                "busy": busy_agents,
+                "details": [
+                    {
+                        "id": agent.id,
+                        "endpoint": agent.endpoint,
+                        "model": agent.model,
+                        "specialty": agent.specialty,
+                        "max_concurrent": agent.max_concurrent,
+                        "current_tasks": agent.current_tasks
+                    } for agent in db_agents
+                ]
             },
             "tasks": {
                 "total": len(self.tasks),
@@ -313,9 +454,14 @@ Complete task → respond JSON format specified above."""
         """Get Prometheus formatted metrics"""
         metrics = []
         
+        with SessionLocal() as db:
+            db_agents = db.query(ORMAgent).all()
+            total_agents = len(db_agents)
+            available_agents = len([a for a in db_agents if a.current_tasks < a.max_concurrent])
+
         # Agent metrics
-        metrics.append(f"hive_agents_total {len(self.agents)}")
-        metrics.append(f"hive_agents_available {len([a for a in self.agents.values() if a.current_tasks < a.max_concurrent])}")
+        metrics.append(f"hive_agents_total {total_agents}")
+        metrics.append(f"hive_agents_available {available_agents}")
         
         # Task metrics
         metrics.append(f"hive_tasks_total {len(self.tasks)}")
@@ -329,7 +475,7 @@ Complete task → respond JSON format specified above."""
 # Example usage and testing functions
 async def demo_coordination():
     """Demonstrate the coordination system"""
-    coordinator = AIDevCoordinator()
+    coordinator = HiveCoordinator()
     
     # Add example agents (you'll replace with your actual endpoints)
     coordinator.add_agent(Agent(
