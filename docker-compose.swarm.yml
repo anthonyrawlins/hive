@@ -14,11 +14,13 @@ services:
     depends_on:
       - postgres
       - redis
+    ports:
+      - "8087:8000"
     networks:
       - hive-network
       - tengig
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -28,13 +30,27 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.hive-api.rule=Host(`hive.home.deepblack.cloud`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.hive-api.entrypoints=web-secured"
-      - "traefik.http.routers.hive-api.tls.certresolver=letsencryptresolver"
-      - "traefik.http.services.hive-api.loadbalancer.server.port=8000"
-      - "traefik.docker.network=tengig"
+      placement:
+        constraints: []
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=tengig"
+        # API routes
+        - "traefik.http.routers.hive-api.rule=Host(`hive.home.deepblack.cloud`) && PathPrefix(`/api`)"
+        - "traefik.http.routers.hive-api.entrypoints=web,web-secured"
+        - "traefik.http.routers.hive-api.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.hive-api.service=hive-api"
+        - "traefik.http.routers.hive-api.priority=200"
+        - "traefik.http.services.hive-api.loadbalancer.server.port=8000"
+        - "traefik.http.services.hive-api.loadbalancer.passhostheader=true"
+        # Socket.IO routes
+        - "traefik.http.routers.hive-socketio.rule=Host(`hive.home.deepblack.cloud`) && PathPrefix(`/socket.io`)"
+        - "traefik.http.routers.hive-socketio.entrypoints=web,web-secured"
+        - "traefik.http.routers.hive-socketio.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.hive-socketio.service=hive-socketio"
+        - "traefik.http.routers.hive-socketio.priority=200"
+        - "traefik.http.services.hive-socketio.loadbalancer.server.port=8000"
+        - "traefik.http.services.hive-socketio.loadbalancer.passhostheader=true"
 
   # Hive Frontend
   hive-frontend:
@@ -43,15 +59,17 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      - REACT_APP_API_URL=https://hive.home.deepblack.cloud/api
-      - REACT_APP_WS_URL=wss://hive.home.deepblack.cloud/ws
+      - REACT_APP_API_URL=https://hive.home.deepblack.cloud
+      - REACT_APP_SOCKETIO_URL=https://hive.home.deepblack.cloud
     depends_on:
       - hive-backend
+    ports:
+      - "3001:3000"
     networks:
       - hive-network
       - tengig
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -61,17 +79,19 @@ services:
           memory: 256M
         reservations:
           memory: 128M
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.hive.rule=Host(`hive.home.deepblack.cloud`)"
-      - "traefik.http.routers.hive.entrypoints=web-secured"
-      - "traefik.http.routers.hive.tls.certresolver=letsencryptresolver"
-      - "traefik.http.services.hive.loadbalancer.server.port=3000"
-      - "traefik.docker.network=tengig"
-      # HTTP redirect to HTTPS
-      - "traefik.http.routers.hive-web.rule=Host(`hive.home.deepblack.cloud`)"
-      - "traefik.http.routers.hive-web.entrypoints=web"
-      - "traefik.http.routers.hive-web.middlewares=redirect-to-https@docker"
+      placement:
+        constraints: []
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=tengig"
+        # Frontend routes (catch-all with lower priority)
+        - "traefik.http.routers.hive-frontend.rule=Host(`hive.home.deepblack.cloud`)"
+        - "traefik.http.routers.hive-frontend.entrypoints=web,web-secured"
+        - "traefik.http.routers.hive-frontend.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.hive-frontend.service=hive-frontend"
+        - "traefik.http.routers.hive-frontend.priority=100"
+        - "traefik.http.services.hive-frontend.loadbalancer.server.port=3000"
+        - "traefik.http.services.hive-frontend.loadbalancer.passhostheader=true"
 
   # PostgreSQL Database
   postgres:
@@ -83,6 +103,8 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
     networks:
       - hive-network
     deploy:
@@ -97,8 +119,7 @@ services:
         reservations:
           memory: 256M
       placement:
-        constraints:
-          - node.role == manager
+        constraints: []
 
   # Redis Cache
   redis:
@@ -106,6 +127,8 @@ services:
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
+    ports:
+      - "6380:6379"
     networks:
       - hive-network
     deploy:
@@ -132,6 +155,8 @@ services:
       - '--web.enable-lifecycle'
     volumes:
       - prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
     networks:
       - hive-network
       - tengig
@@ -147,15 +172,14 @@ services:
         reservations:
           memory: 256M
       placement:
-        constraints:
-          - node.role == manager
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.hive-prometheus.rule=Host(`hive.home.deepblack.cloud`) && PathPrefix(`/prometheus`)"
-      - "traefik.http.routers.hive-prometheus.entrypoints=web-secured"
-      - "traefik.http.routers.hive-prometheus.tls.certresolver=letsencryptresolver"
-      - "traefik.http.services.hive-prometheus.loadbalancer.server.port=9090"
-      - "traefik.docker.network=tengig"
+        constraints: []
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.hive-prometheus.rule=Host(`hive.home.deepblack.cloud`) && PathPrefix(`/prometheus`)"
+        - "traefik.http.routers.hive-prometheus.entrypoints=web-secured"
+        - "traefik.http.routers.hive-prometheus.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.hive-prometheus.loadbalancer.server.port=9090"
+        - "traefik.docker.network=tengig"
 
   # Grafana Dashboard
   grafana:
@@ -170,6 +194,8 @@ services:
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+    ports:
+      - "3002:3000"
     networks:
       - hive-network
       - tengig
@@ -185,15 +211,14 @@ services:
         reservations:
           memory: 256M
       placement:
-        constraints:
-          - node.role == manager
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.hive-grafana.rule=Host(`hive.home.deepblack.cloud`) && PathPrefix(`/grafana`)"
-      - "traefik.http.routers.hive-grafana.entrypoints=web-secured"
-      - "traefik.http.routers.hive-grafana.tls.certresolver=letsencryptresolver"
-      - "traefik.http.services.hive-grafana.loadbalancer.server.port=3000"
-      - "traefik.docker.network=tengig"
+        constraints: []
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.hive-grafana.rule=Host(`hive.home.deepblack.cloud`) && PathPrefix(`/grafana`)"
+        - "traefik.http.routers.hive-grafana.entrypoints=web-secured"
+        - "traefik.http.routers.hive-grafana.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.hive-grafana.loadbalancer.server.port=3000"
+        - "traefik.docker.network=tengig"
 
 networks:
   hive-network:

@@ -62,8 +62,8 @@ export class HiveClient {
 
   constructor(config?: Partial<HiveConfig>) {
     this.config = {
-      baseUrl: process.env.HIVE_API_URL || 'https://hive.home.deepblack.cloud',
-      wsUrl: process.env.HIVE_WS_URL || 'wss://hive.home.deepblack.cloud',
+      baseUrl: process.env.HIVE_API_URL || 'https://hive.home.deepblack.cloud/api',
+      wsUrl: process.env.HIVE_WS_URL || 'wss://hive.home.deepblack.cloud/socket.io',
       timeout: parseInt(process.env.HIVE_TIMEOUT || '30000'),
       ...config,
     };
@@ -80,7 +80,7 @@ export class HiveClient {
   async testConnection(): Promise<boolean> {
     try {
       const response = await this.api.get('/health');
-      return response.data.status === 'healthy';
+      return response.data.status === 'healthy' || response.status === 200;
     } catch (error) {
       throw new Error(`Failed to connect to Hive: ${error}`);
     }

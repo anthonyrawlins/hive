@@ -25,10 +25,10 @@ cd /home/tony/AI/projects/hive
 ```
 
 ### 2. Access Services
-- **🌐 Hive Dashboard**: http://localhost:3000
-- **📡 API Documentation**: http://localhost:8000/docs  
-- **📊 Grafana Monitoring**: http://localhost:3001 (admin/hiveadmin)
-- **🔍 Prometheus Metrics**: http://localhost:9090
+- **🌐 Hive Dashboard**: https://hive.home.deepblack.cloud
+- **📡 API Documentation**: https://hive.home.deepblack.cloud/api/docs  
+- **📊 Grafana Monitoring**: https://hive.home.deepblack.cloud/grafana (admin/hiveadmin)
+- **🔍 Prometheus Metrics**: https://hive.home.deepblack.cloud/prometheus
 
 ### 3. Default Credentials
 - **Grafana**: admin / hiveadmin

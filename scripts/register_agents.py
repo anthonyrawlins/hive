@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 # Configuration
-HIVE_API_URL = "http://localhost:8087"
+HIVE_API_URL = "https://hive.home.deepblack.cloud/api"
 CONFIG_FILE = "/home/tony/AI/projects/hive/config/hive.yaml"
 
 def load_config():
@@ -136,7 +136,7 @@ def main():
     
     if successful_registrations > 0:
         print(f"\n🎉 Successfully registered {successful_registrations} agents!")
-        print("🔗 Check agent status: curl http://localhost:8087/api/agents")
+        print("🔗 Check agent status: curl https://hive.home.deepblack.cloud/api/agents")
     else:
         print("\n💔 No agents were successfully registered.")
         sys.exit(1)

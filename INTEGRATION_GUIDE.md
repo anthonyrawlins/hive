@@ -251,8 +251,8 @@ vim ~/Library/Application\ Support/Claude/claude_desktop_config.json
 
 # Update the env section:
 "env": {
-  "HIVE_API_URL": "http://your-hive-host:8087",
-  "HIVE_WS_URL": "ws://your-hive-host:8087"  
+  "HIVE_API_URL": "https://your-hive-host/api",
+  "HIVE_WS_URL": "wss://your-hive-host/socket.io"  
 }
 ```
 
@@ -266,14 +266,14 @@ You can configure multiple Hive clusters:
       "command": "node",
       "args": ["/path/to/hive/mcp-server/dist/index.js"],
       "env": {
-        "HIVE_API_URL": "http://prod-hive:8087"
+        "HIVE_API_URL": "https://prod-hive/api"
       }
     },
     "hive-development": {
       "command": "node", 
       "args": ["/path/to/hive/mcp-server/dist/index.js"],
       "env": {
-        "HIVE_API_URL": "http://dev-hive:8087"
+        "HIVE_API_URL": "https://dev-hive/api"
       }
     }
   }
