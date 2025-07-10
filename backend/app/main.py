@@ -12,7 +12,6 @@ import socketio
 from .core.unified_coordinator import UnifiedCoordinator
 from .core.database import engine, get_db, init_database_with_retry, test_database_connection
 from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents, auth
-# from .mcp.distributed_mcp_server import get_mcp_server
 from .models.user import Base
 from .models import agent, project # Import the new agent and project models
 
@@ -45,10 +44,6 @@ async def lifespan(app: FastAPI):
         print("🤖 Initializing Unified Coordinator...")
         await unified_coordinator.start()
         
-        # Initialize MCP server
-        # print("🔌 Initializing MCP server...")
-        # mcp_server = get_mcp_server()
-        # await mcp_server.initialize(distributed_coordinator)
         
         startup_success = True
         print("✅ Hive Orchestrator with Unified Coordinator started successfully!")
