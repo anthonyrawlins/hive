@@ -1,7 +1,7 @@
 services:
   # Hive Backend API
   hive-backend:
-    image: anthonyrawlins/hive-backend:cli-support
+    image: anthonyrawlins/hive-backend:auth-system
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -54,7 +54,7 @@ services:
 
   # Hive Frontend
   hive-frontend:
-    image: anthonyrawlins/hive-frontend:latest
+    image: anthonyrawlins/hive-frontend:auth-system
     build:
       context: ./frontend
       dockerfile: Dockerfile
