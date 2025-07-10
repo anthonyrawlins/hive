@@ -12,8 +12,7 @@ import socketio
 from .core.hive_coordinator import HiveCoordinator
 from .core.distributed_coordinator import DistributedCoordinator
 from .core.database import engine, get_db, init_database_with_retry, test_database_connection
-from .core.auth import get_current_user
-from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents
+from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents, auth
 # from .mcp.distributed_mcp_server import get_mcp_server
 from .models.user import Base
 from .models import agent, project # Import the new agent and project models
@@ -34,6 +33,11 @@ async def lifespan(app: FastAPI):
         # Initialize database with retry logic
         print("📊 Initializing database...")
         init_database_with_retry()
+        
+        # Initialize auth database tables and initial data
+        print("🔐 Initializing authentication system...")
+        from .core.init_db import initialize_database
+        initialize_database()
         
         # Test database connection
         if not test_database_connection():
@@ -100,6 +104,7 @@ app.add_middleware(
 )
 
 # Include API routes
+app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(agents.router, prefix="/api", tags=["agents"])
 app.include_router(workflows.router, prefix="/api", tags=["workflows"])
 app.include_router(executions.router, prefix="/api", tags=["executions"])
