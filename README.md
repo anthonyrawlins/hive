@@ -25,10 +25,12 @@ cd /home/tony/AI/projects/hive
 ```
 
 ### 2. Access Services
-- **🌐 Hive Dashboard**: https://hive.home.deepblack.cloud
-- **📡 API Documentation**: https://hive.home.deepblack.cloud/api/docs  
-- **📊 Grafana Monitoring**: https://hive.home.deepblack.cloud/grafana (admin/hiveadmin)
-- **🔍 Prometheus Metrics**: https://hive.home.deepblack.cloud/prometheus
+- **🌐 Hive Dashboard**: https://hive.home.deepblack.cloud (port 3001)
+- **📡 API Documentation**: https://hive.home.deepblack.cloud/api/docs (port 8087)
+- **📊 Grafana Monitoring**: https://hive.home.deepblack.cloud/grafana (admin/hiveadmin) (port 3002)
+- **🔍 Prometheus Metrics**: https://hive.home.deepblack.cloud/prometheus (port 9091)
+- **🗄️ Database**: localhost:5433 (PostgreSQL)
+- **🔄 Redis**: localhost:6380
 
 ### 3. Default Credentials
 - **Grafana**: admin / hiveadmin
@@ -112,43 +114,45 @@ cd /home/tony/AI/projects/hive
 ### Service Management
 ```bash
 # View all service logs
-docker-compose logs -f
+docker service logs hive_hive-backend -f
 
 # View specific service logs
-docker-compose logs -f hive-backend
+docker service logs hive_hive-frontend -f
 
-# Restart services
-docker-compose restart
+# Restart services (remove and redeploy)
+docker stack rm hive && docker stack deploy -c docker-compose.swarm.yml hive
 
 # Stop all services
-docker-compose down
+docker stack rm hive
 
 # Rebuild and restart
-docker-compose up -d --build
+docker build -t anthonyrawlins/hive-backend:latest ./backend
+docker build -t anthonyrawlins/hive-frontend:latest ./frontend
+docker stack deploy -c docker-compose.swarm.yml hive
 ```
 
 ### Development
 ```bash
 # Access backend shell
-docker-compose exec hive-backend bash
+docker exec -it $(docker ps -q -f name=hive_hive-backend) bash
 
 # Access database
-docker-compose exec postgres psql -U hive -d hive
+docker exec -it $(docker ps -q -f name=hive_postgres) psql -U hive -d hive
 
 # View Redis data
-docker-compose exec redis redis-cli
+docker exec -it $(docker ps -q -f name=hive_redis) redis-cli
 ```
 
 ### Monitoring
 ```bash
 # Check service health
-curl http://localhost:8000/health
+curl http://localhost:8087/health
 
 # Get system status
-curl http://localhost:8000/api/status
+curl http://localhost:8087/api/status
 
 # View Prometheus metrics
-curl http://localhost:8000/api/metrics
+curl http://localhost:8087/api/metrics
 ```
 
 ## 📁 Project Structure
@@ -302,12 +306,12 @@ Hive was created by consolidating these existing projects:
 ### Documentation
 - **📋 PROJECT_PLAN.md**: Comprehensive project overview
 - **🏗️ ARCHITECTURE.md**: Technical architecture details
-- **🔧 API Docs**: http://localhost:8000/docs (when running)
+- **🔧 API Docs**: http://localhost:8087/docs (when running)
 
 ### Troubleshooting
-- **Logs**: `docker-compose logs -f`
-- **Health Check**: `curl http://localhost:8000/health`
-- **Agent Status**: Check Hive dashboard at http://localhost:3000
+- **Logs**: `docker service logs hive_hive-backend -f`
+- **Health Check**: `curl http://localhost:8087/health`
+- **Agent Status**: Check Hive dashboard at https://hive.home.deepblack.cloud
 
 ---
 
