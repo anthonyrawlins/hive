@@ -5,7 +5,8 @@
 
 set -e
 
-HIVE_ROOT="/home/tony/AI/projects/hive"
+# Use relative path or environment variable
+HIVE_ROOT="${HIVE_ROOT:-$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")}"
 LOG_FILE="$HIVE_ROOT/logs/startup.log"
 
 # Colors for output
@@ -78,40 +79,79 @@ fi
 
 log_success "docker compose is available"
 
+# Check if docker-compose.swarm.yml exists
+if [ ! -f "$HIVE_ROOT/docker-compose.swarm.yml" ]; then
+    log_error "docker-compose.swarm.yml not found in $HIVE_ROOT"
+    exit 1
+fi
+
 # Pull latest images
 log_info "Pulling latest base images..."
-docker compose pull postgres redis prometheus grafana
+if docker compose -f docker-compose.swarm.yml pull postgres redis prometheus grafana; then
+    log_success "Base images pulled successfully"
+else
+    log_error "Failed to pull base images"
+    exit 1
+fi
 
 # Build Hive services
 log_info "Building Hive services..."
-if docker compose build; then
+if docker build -t anthonyrawlins/hive-backend:latest ./backend && docker build -t anthonyrawlins/hive-frontend:latest ./frontend; then
     log_success "Hive services built successfully"
 else
     log_error "Failed to build Hive services"
     exit 1
 fi
 
-# Start services
-log_info "Starting Hive services..."
-if docker compose up -d; then
-    log_success "Hive services started successfully"
+# Deploy services using docker stack
+log_info "Deploying Hive services..."
+if docker stack deploy -c docker-compose.swarm.yml hive; then
+    log_success "Hive services deployed successfully"
 else
-    log_error "Failed to start Hive services"
+    log_error "Failed to deploy Hive services"
     exit 1
 fi
 
-# Wait for services to be ready
+# Wait for services to be ready with proper health checks
 log_info "Waiting for services to be ready..."
-sleep 10
+wait_for_service() {
+    local service=$1
+    local url=$2
+    local timeout=60
+    local count=0
+    
+    while [ $count -lt $timeout ]; do
+        if timeout 5 curl -s "$url" &> /dev/null; then
+            return 0
+        fi
+        sleep 2
+        count=$((count + 2))
+    done
+    return 1
+}
 
-# Check service health
+# Wait for backend API
+if wait_for_service "hive-backend" "http://localhost:8000/health"; then
+    log_success "Backend API is ready"
+else
+    log_warning "Backend API not responding after 60 seconds"
+fi
+
+# Wait for frontend
+if wait_for_service "hive-frontend" "http://localhost:3000"; then
+    log_success "Frontend is ready"
+else
+    log_warning "Frontend not responding after 60 seconds"
+fi
+
+# Check service health using docker stack
 log_info "Checking service health..."
 
-services=("postgres" "redis" "hive-backend" "hive-frontend" "prometheus" "grafana")
+services=("hive_postgres" "hive_redis" "hive_hive-backend" "hive_hive-frontend" "hive_prometheus" "hive_grafana")
 healthy_services=0
 
 for service in "${services[@]}"; do
-    if docker compose ps "$service" | grep -q "Up"; then
+    if docker service ls --filter "name=$service" --format "{{.Replicas}}" | grep -q "1/1"; then
         log_success "$service is running"
         ((healthy_services++))
     else
@@ -127,11 +167,11 @@ fi
 
 # Display service URLs
 echo -e "\n${CYAN}🔗 Service URLs:${NC}"
-echo -e "${GREEN}  • Hive Frontend:${NC}     http://localhost:3000"
-echo -e "${GREEN}  • Hive API:${NC}          http://localhost:8000"
-echo -e "${GREEN}  • API Documentation:${NC} http://localhost:8000/docs"
-echo -e "${GREEN}  • Grafana Dashboard:${NC} http://localhost:3001 (admin/hiveadmin)"
-echo -e "${GREEN}  • Prometheus:${NC}        http://localhost:9090"
+echo -e "${GREEN}  • Hive Frontend:${NC}     https://hive.home.deepblack.cloud"
+echo -e "${GREEN}  • Hive API:${NC}          https://hive-api.home.deepblack.cloud"
+echo -e "${GREEN}  • API Documentation:${NC} https://hive-api.home.deepblack.cloud/docs"
+echo -e "${GREEN}  • Grafana Dashboard:${NC} https://hive-grafana.home.deepblack.cloud (admin/hiveadmin)"
+echo -e "${GREEN}  • Prometheus:${NC}        https://hive-prometheus.home.deepblack.cloud"
 echo -e "${GREEN}  • PostgreSQL:${NC}        localhost:5432 (hive/hivepass)"
 echo -e "${GREEN}  • Redis:${NC}             localhost:6379"
 
@@ -146,18 +186,18 @@ echo -e "${GREEN}  • TULLY:${NC}     http://Tullys-MacBook-Air.local:11434 (Mo
 
 # Display next steps
 echo -e "\n${PURPLE}📋 Next Steps:${NC}"
-echo -e "${YELLOW}  1.${NC} Open Hive Dashboard: ${BLUE}http://localhost:3000${NC}"
+echo -e "${YELLOW}  1.${NC} Open Hive Dashboard: ${BLUE}https://hive.home.deepblack.cloud${NC}"
 echo -e "${YELLOW}  2.${NC} Check agent connectivity in the dashboard"
 echo -e "${YELLOW}  3.${NC} Import or create your first workflow"
 echo -e "${YELLOW}  4.${NC} Monitor execution in real-time"
-echo -e "${YELLOW}  5.${NC} View metrics in Grafana: ${BLUE}http://localhost:3001${NC}"
+echo -e "${YELLOW}  5.${NC} View metrics in Grafana: ${BLUE}https://hive-grafana.home.deepblack.cloud${NC}"
 
 # Display management commands
 echo -e "\n${PURPLE}🛠️  Management Commands:${NC}"
-echo -e "${YELLOW}  • View logs:${NC}      docker compose logs -f"
-echo -e "${YELLOW}  • Stop services:${NC}  docker compose down"
-echo -e "${YELLOW}  • Restart:${NC}        docker compose restart"
-echo -e "${YELLOW}  • Shell access:${NC}   docker compose exec hive-backend bash"
+echo -e "${YELLOW}  • View logs:${NC}      docker service logs hive_hive-backend"
+echo -e "${YELLOW}  • Stop services:${NC}  docker stack rm hive"
+echo -e "${YELLOW}  • Restart:${NC}        docker stack rm hive && docker stack deploy -c docker-compose.swarm.yml hive"
+echo -e "${YELLOW}  • Shell access:${NC}   docker exec -it \$(docker ps -q -f name=hive_hive-backend) bash"
 
 # Check agent connectivity
 echo -e "\n${CYAN}🔍 Testing Agent Connectivity:${NC}"
@@ -166,6 +206,9 @@ agents=(
     "ACACIA:192.168.1.72:11434"
     "WALNUT:192.168.1.27:11434"
     "IRONWOOD:192.168.1.113:11434"
+    "ROSEWOOD:192.168.1.132:11434"
+    "OAK:oak.local:11434"
+    "TULLY:Tullys-MacBook-Air.local:11434"
 )
 
 for agent_info in "${agents[@]}"; do
