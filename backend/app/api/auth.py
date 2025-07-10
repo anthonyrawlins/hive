@@ -18,7 +18,8 @@ from app.core.auth_deps import (
     get_current_superuser,
     require_admin
 )
-from app.models.auth import User, APIKey, RefreshToken, TokenBlacklist, API_SCOPES, DEFAULT_API_SCOPES
+from app.models.user import User
+from app.models.auth import APIKey, RefreshToken, TokenBlacklist, API_SCOPES, DEFAULT_API_SCOPES
 
 router = APIRouter()
 

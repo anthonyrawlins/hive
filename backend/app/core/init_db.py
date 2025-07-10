@@ -5,19 +5,18 @@ Creates all tables and sets up initial data.
 
 import logging
 from sqlalchemy.orm import Session
-from app.core.database import engine, SessionLocal
-from app.models.auth import Base as AuthBase, User, API_SCOPES
-from app.models.auth import APIKey
+from app.core.database import engine, SessionLocal, Base
+from app.models.user import User
+from app.models.auth import API_SCOPES, APIKey
 
-# Import other model bases here as they're created
-# from app.models.workflows import Base as WorkflowsBase
-# from app.models.agents import Base as AgentsBase
+# Import all models to ensure they're registered with Base
+from app.models import user, auth, agent, project
 
 def create_tables():
     """Create all database tables."""
     try:
-        # Create auth tables
-        AuthBase.metadata.create_all(bind=engine)
+        # Create all tables using the unified Base
+        Base.metadata.create_all(bind=engine)
         
         # Add other model bases here
         # WorkflowsBase.metadata.create_all(bind=engine)

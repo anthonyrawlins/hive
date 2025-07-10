@@ -61,7 +61,7 @@ def get_current_active_user(
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Get current authenticated and active user."""
-    from app.models.auth import User
+    from app.models.user import User
     
     user = db.query(User).filter(User.id == user_context["user_id"]).first()
     if not user:

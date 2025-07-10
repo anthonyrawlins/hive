@@ -224,8 +224,8 @@ class AuthManager:
                     raise AuthenticationError("Token has been revoked")
                 
                 # Get user information
-                user_id = int(payload.get("sub"))
-                from app.models.auth import User
+                user_id = payload.get("sub")  # UUID as string
+                from app.models.user import User
                 user = session.query(User).filter(User.id == user_id).first()
                 
                 if not user or not user.is_active:
@@ -279,7 +279,7 @@ def create_token_response(user_id: int, user_data: Dict[str, Any]) -> Dict[str, 
 
 def get_password_hash(password: str) -> str:
     """Hash a password for storage."""
-    from app.models.auth import User
+    from app.models.user import User
     return User.hash_password(password)
 
 

@@ -1,6 +1,7 @@
 """
 Authentication and authorization models for Hive platform.
-Includes users, API keys, and JWT token management.
+Includes API keys and JWT token management.
+User model is now in models/user.py for consistency.
 """
 
 from datetime import datetime, timedelta
@@ -8,71 +9,13 @@ from typing import Optional, List
 import secrets
 import string
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 from passlib.context import CryptContext
-
-Base = declarative_base()
+from ..core.database import Base
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-class User(Base):
-    """User model for authentication and authorization."""
-    
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(255), nullable=True)
-    
-    # User status and permissions
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
-    is_verified = Column(Boolean, default=False)
-    
-    # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_login = Column(DateTime, nullable=True)
-    
-    # Relationships
-    api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
-    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
-    
-    def verify_password(self, password: str) -> bool:
-        """Verify a password against the hashed password."""
-        return pwd_context.verify(password, self.hashed_password)
-    
-    @classmethod
-    def hash_password(cls, password: str) -> str:
-        """Hash a password for storage."""
-        return pwd_context.hash(password)
-    
-    def set_password(self, password: str) -> None:
-        """Set a new password for the user."""
-        self.hashed_password = self.hash_password(password)
-    
-    def update_last_login(self) -> None:
-        """Update the last login timestamp."""
-        self.last_login = datetime.utcnow()
-    
-    def to_dict(self) -> dict:
-        """Convert user to dictionary (excluding sensitive data)."""
-        return {
-            "id": self.id,
-            "username": self.username,
-            "email": self.email,
-            "full_name": self.full_name,
-            "is_active": self.is_active,
-            "is_superuser": self.is_superuser,
-            "is_verified": self.is_verified,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_login": self.last_login.isoformat() if self.last_login else None,
-        }
 
 
 class APIKey(Base):
@@ -81,7 +24,7 @@ class APIKey(Base):
     __tablename__ = "api_keys"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     
     # API Key details
     name = Column(String(255), nullable=False)  # Human-readable name
@@ -178,7 +121,7 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     
     # Token details
     token_hash = Column(String(255), unique=True, index=True, nullable=False)

@@ -6,7 +6,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
-  id: number;
+  id: string; // UUID as string
   username: string;
   email: string;
   full_name?: string;
@@ -16,6 +16,7 @@ interface User {
   is_superuser: boolean;
   is_verified: boolean;
   created_at: string;
+  updated_at?: string;
   last_login?: string;
 }
 
