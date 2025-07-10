@@ -44,6 +44,7 @@ class User(Base):
     # Relationships for authentication features
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    workflows = relationship("Workflow", back_populates="creator")
     
     def verify_password(self, password: str) -> bool:
         """Verify a password against the hashed password."""
