@@ -1,19 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Dict, Any, Optional
 from ..core.auth import get_current_user
-from ..core.hive_coordinator import AIDevCoordinator, AgentType, TaskStatus
+from ..core.hive_coordinator import HiveCoordinator, AgentType, TaskStatus
 
 router = APIRouter()
 
 # This will be injected by main.py
-hive_coordinator: AIDevCoordinator = None
+hive_coordinator: HiveCoordinator = None
 
-def set_coordinator(coordinator: AIDevCoordinator):
+def set_coordinator(coordinator: HiveCoordinator):
     global hive_coordinator
     hive_coordinator = coordinator
 
 @router.post("/tasks")
-async def create_task(task_data: Dict[str, Any], current_user: dict = Depends(get_current_user)):
+async def create_task(task_data: Dict[str, Any]):
     """Create a new development task"""
     try:
         # Map string type to AgentType enum

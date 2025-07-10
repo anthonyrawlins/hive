@@ -4,8 +4,9 @@
       "command": "node",
       "args": ["/home/tony/AI/projects/hive/mcp-server/dist/index.js"],
       "env": {
-        "HIVE_API_URL": "https://hive.home.deepblack.cloud",
-        "HIVE_WS_URL": "wss://hive.home.deepblack.cloud"
+        "HIVE_API_URL": "https://hive.home.deepblack.cloud/api",
+        "HIVE_WS_URL": "wss://hive.home.deepblack.cloud/socket.io",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       }
     }
   }

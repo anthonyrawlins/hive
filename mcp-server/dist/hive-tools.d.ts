@@ -23,5 +23,8 @@ export declare class HiveTools {
     private getExecutions;
     private coordinateDevelopment;
     private bringHiveOnline;
+    private registerCliAgent;
+    private getCliAgents;
+    private registerPredefinedCliAgents;
 }
 //# sourceMappingURL=hive-tools.d.ts.map

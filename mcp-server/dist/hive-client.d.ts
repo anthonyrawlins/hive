@@ -17,6 +17,17 @@ export interface Agent {
     status: 'available' | 'busy' | 'offline';
     current_tasks: number;
     max_concurrent: number;
+    agent_type?: 'ollama' | 'cli';
+    cli_config?: {
+        host?: string;
+        node_version?: string;
+        model?: string;
+        specialization?: string;
+        max_concurrent?: number;
+        command_timeout?: number;
+        ssh_timeout?: number;
+        agent_type?: string;
+    };
 }
 export interface Task {
     id: string;
@@ -57,6 +68,30 @@ export declare class HiveClient {
     getAgents(): Promise<Agent[]>;
     registerAgent(agentData: Partial<Agent>): Promise<{
         agent_id: string;
+    }>;
+    getCliAgents(): Promise<Agent[]>;
+    registerCliAgent(agentData: {
+        id: string;
+        host: string;
+        node_version: string;
+        model?: string;
+        specialization?: string;
+        max_concurrent?: number;
+        agent_type?: string;
+        command_timeout?: number;
+        ssh_timeout?: number;
+    }): Promise<{
+        agent_id: string;
+        endpoint: string;
+        health_check?: any;
+    }>;
+    registerPredefinedCliAgents(): Promise<{
+        results: any[];
+    }>;
+    healthCheckCliAgent(agentId: string): Promise<any>;
+    getCliAgentStatistics(): Promise<any>;
+    unregisterCliAgent(agentId: string): Promise<{
+        success: boolean;
     }>;
     createTask(taskData: {
         type: string;

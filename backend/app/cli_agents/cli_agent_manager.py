@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 from dataclasses import asdict
 
 # Add CCLI source to path
-ccli_path = os.path.join(os.path.dirname(__file__), '../../../../ccli/src')
+ccli_path = os.path.join(os.path.dirname(__file__), '../../../ccli_src')
 sys.path.insert(0, ccli_path)
 
 from agents.gemini_cli_agent import GeminiCliAgent, GeminiCliConfig, TaskRequest as CliTaskRequest, TaskResult as CliTaskResult

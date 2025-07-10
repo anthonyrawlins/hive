@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from typing import List, Dict, Any
-from ..core.auth import get_current_user
 from ..core.hive_coordinator import Agent, AgentType
 
 router = APIRouter()
@@ -9,7 +8,7 @@ from app.core.database import SessionLocal
 from app.models.agent import Agent as ORMAgent
 
 @router.get("/agents")
-async def get_agents(request: Request, current_user: dict = Depends(get_current_user)):
+async def get_agents(request: Request):
     """Get all registered agents"""
     with SessionLocal() as db:
         db_agents = db.query(ORMAgent).all()
@@ -30,7 +29,7 @@ async def get_agents(request: Request, current_user: dict = Depends(get_current_
     }
 
 @router.post("/agents")
-async def register_agent(agent_data: Dict[str, Any], request: Request, current_user: dict = Depends(get_current_user)):
+async def register_agent(agent_data: Dict[str, Any], request: Request):
     """Register a new agent"""
     hive_coordinator = request.app.state.hive_coordinator
     

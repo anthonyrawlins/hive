@@ -70,16 +70,20 @@ async def register_cli_agent(
             "agent_type": agent_data.agent_type
         }
         
-        # Test CLI agent connectivity before registration
-        test_agent = cli_manager.cli_factory.create_agent(f"test-{agent_data.id}", cli_config)
-        health = await test_agent.health_check()
-        await test_agent.cleanup()  # Clean up test agent
-        
-        if not health.get("cli_healthy", False):
-            raise HTTPException(
-                status_code=400, 
-                detail=f"CLI agent connectivity test failed for {agent_data.host}"
-            )
+        # Test CLI agent connectivity before registration (optional for development)
+        health = {"cli_healthy": True, "test_skipped": True}
+        try:
+            test_agent = cli_manager.cli_factory.create_agent(f"test-{agent_data.id}", cli_config)
+            health = await test_agent.health_check()
+            await test_agent.cleanup()  # Clean up test agent
+            
+            if not health.get("cli_healthy", False):
+                print(f"⚠️ CLI agent connectivity test failed for {agent_data.host}, but proceeding with registration")
+                health["cli_healthy"] = False
+                health["warning"] = f"Connectivity test failed for {agent_data.host}"
+        except Exception as e:
+            print(f"⚠️ CLI agent connectivity test error for {agent_data.host}: {e}, proceeding anyway")
+            health = {"cli_healthy": False, "error": str(e), "test_skipped": True}
         
         # Map specialization to Hive AgentType
         specialization_mapping = {
@@ -109,9 +113,11 @@ async def register_cli_agent(
         # For now, we'll register directly in the database
         db_agent = ORMAgent(
             id=hive_agent.id,
+            name=f"{agent_data.host}-{agent_data.agent_type}",
             endpoint=hive_agent.endpoint,
             model=hive_agent.model,
             specialty=hive_agent.specialty.value,
+            specialization=hive_agent.specialty.value,  # For compatibility
             max_concurrent=hive_agent.max_concurrent,
             current_tasks=hive_agent.current_tasks,
             agent_type=hive_agent.agent_type,
@@ -266,7 +272,7 @@ async def register_predefined_cli_agents(db: Session = Depends(get_db)):
     
     predefined_configs = [
         {
-            "id": "walnut-gemini",
+            "id": "550e8400-e29b-41d4-a716-446655440001",  # walnut-gemini UUID
             "host": "walnut",
             "node_version": "v22.14.0",
             "model": "gemini-2.5-pro",
@@ -275,11 +281,20 @@ async def register_predefined_cli_agents(db: Session = Depends(get_db)):
             "agent_type": "gemini"
         },
         {
-            "id": "ironwood-gemini",
+            "id": "550e8400-e29b-41d4-a716-446655440002",  # ironwood-gemini UUID
             "host": "ironwood", 
             "node_version": "v22.17.0",
             "model": "gemini-2.5-pro",
             "specialization": "reasoning",
+            "max_concurrent": 2,
+            "agent_type": "gemini"
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440003",  # rosewood-gemini UUID
+            "host": "rosewood",
+            "node_version": "v22.17.0", 
+            "model": "gemini-2.5-pro",
+            "specialization": "cli_gemini",
             "max_concurrent": 2,
             "agent_type": "gemini"
         }

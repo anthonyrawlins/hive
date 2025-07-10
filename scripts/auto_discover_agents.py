@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 import time
 
 # Configuration
-HIVE_API_URL = "http://localhost:8087"
+HIVE_API_URL = "https://hive.home.deepblack.cloud"
 SUBNET_BASE = "192.168.1"
 OLLAMA_PORT = 11434
 DISCOVERY_TIMEOUT = 3
@@ -167,37 +167,37 @@ class AgentDiscovery:
         return discovered
     
     def determine_agent_specialty(self, models: List[str], hostname: str) -> str:
-        """Determine agent specialty based on models and hostname"""
+        """Determine agent specialty based on models and hostname using valid AgentType values"""
         model_str = " ".join(models).lower()
         hostname_lower = hostname.lower()
         
-        # Check hostname patterns
+        # Check hostname patterns - map to valid Hive AgentType values
         if "walnut" in hostname_lower:
-            return "Senior Full-Stack Development & Architecture"
+            return "pytorch_dev"  # Full-stack development
         elif "acacia" in hostname_lower:
-            return "Infrastructure, DevOps & System Architecture"
+            return "profiler"  # Infrastructure/DevOps
         elif "ironwood" in hostname_lower:
-            return "Backend Development & Code Analysis"
+            return "pytorch_dev"  # Backend development  
         elif "forsteinet" in hostname_lower:
-            return "AI Compute & Processing"
+            return "kernel_dev"  # AI Compute
         elif "rosewood" in hostname_lower:
-            return "Quality Assurance, Testing & Code Review"
+            return "tester"  # QA and Testing
         elif "oak" in hostname_lower:
-            return "iOS/macOS Development & Apple Ecosystem"
+            return "docs_writer"  # iOS/macOS Development
         
         # Check model patterns
-        if "starcoder" in model_str:
-            return "Full-Stack Development & Code Generation"
+        if "starcoder" in model_str or "codegemma" in model_str:
+            return "pytorch_dev"  # Code generation
         elif "deepseek-coder" in model_str:
-            return "Backend Development & Code Analysis"
+            return "pytorch_dev"  # Backend development
         elif "deepseek-r1" in model_str:
-            return "Infrastructure & System Architecture"
+            return "profiler"  # Analysis and architecture
         elif "devstral" in model_str:
-            return "Development & Code Review"
+            return "tester"  # Development review
         elif "llava" in model_str:
-            return "Vision & Multimodal Analysis"
+            return "docs_writer"  # Vision/documentation
         else:
-            return "General AI Development"
+            return "pytorch_dev"  # Default to pytorch development
     
     def determine_capabilities(self, specialty: str) -> List[str]:
         """Determine capabilities based on specialty"""
@@ -240,9 +240,11 @@ class AgentDiscovery:
             
             agent_data = {
                 "id": hostname.lower().replace(".", "_"),
+                "name": f"{hostname} Ollama Agent",
                 "endpoint": agent_info["endpoint"],
                 "model": agent_info["primary_model"],
                 "specialty": specialty,
+                "specialization": specialty,  # For compatibility
                 "capabilities": capabilities,
                 "available_models": agent_info["models"],
                 "model_count": agent_info["model_count"],
@@ -251,6 +253,7 @@ class AgentDiscovery:
                 "status": "available",
                 "current_tasks": 0,
                 "max_concurrent": 3,
+                "agent_type": "ollama",
                 "discovered_at": time.time()
             }
             

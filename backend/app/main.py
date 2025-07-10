@@ -13,7 +13,7 @@ from .core.hive_coordinator import HiveCoordinator
 from .core.distributed_coordinator import DistributedCoordinator
 from .core.database import engine, get_db, init_database_with_retry, test_database_connection
 from .core.auth import get_current_user
-from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows
+from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents
 # from .mcp.distributed_mcp_server import get_mcp_server
 from .models.user import Base
 from .models import agent, project # Import the new agent and project models
@@ -108,6 +108,7 @@ app.include_router(projects.router, prefix="/api", tags=["projects"])
 app.include_router(tasks.router, prefix="/api", tags=["tasks"])
 app.include_router(cluster.router, prefix="/api", tags=["cluster"])
 app.include_router(distributed_workflows.router, tags=["distributed-workflows"])
+app.include_router(cli_agents.router, tags=["cli-agents"])
 
 # Set coordinator reference in tasks module
 tasks.set_coordinator(hive_coordinator)

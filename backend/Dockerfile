@@ -17,7 +17,7 @@ ENV DATABASE_URL=postgresql://hive:hive@postgres:5432/hive
 ENV REDIS_URL=redis://redis:6379/0
 ENV LOG_LEVEL=info
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/app
+ENV PYTHONPATH=/app/app:/app/ccli_src
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -27,6 +27,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Copy CCLI source code for CLI agent integration
+COPY ccli_src /app/ccli_src
 
 # Create non-root user
 RUN useradd -m -u 1000 hive && chown -R hive:hive /app

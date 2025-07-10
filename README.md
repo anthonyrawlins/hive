@@ -193,6 +193,20 @@ hive/
 
 ## 🔧 Configuration
 
+### Environment Variables
+Copy `.env.example` to `.env` and customize for your environment:
+
+```bash
+cp .env.example .env
+```
+
+Key environment variables:
+- `CORS_ORIGINS`: Allowed CORS origins (default: https://hive.home.deepblack.cloud)
+- `DATABASE_URL`: PostgreSQL connection string
+- `REDIS_URL`: Redis connection string
+- `ENVIRONMENT`: Environment mode (development/production)
+- `LOG_LEVEL`: Logging level (debug/info/warning/error)
+
 ### Agent Configuration
 Edit `config/hive.yaml` to add or modify agents:
 
@@ -306,6 +320,7 @@ Hive was created by consolidating these existing projects:
 ### Documentation
 - **📋 PROJECT_PLAN.md**: Comprehensive project overview
 - **🏗️ ARCHITECTURE.md**: Technical architecture details
+- **🛠️ LOCAL_DEVELOPMENT.md**: Local development setup guide
 - **🔧 API Docs**: http://localhost:8087/docs (when running)
 
 ### Troubleshooting

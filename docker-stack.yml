@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  hive_backend:
+    image: anthonyrawlins/hive-backend:cli-support
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=tengig"
+        - "traefik.http.routers.hive_backend.rule=Host(`hive-api.home.deepblack.cloud`)"
+        - "traefik.http.routers.hive_backend.entrypoints=web"
+        - "traefik.http.services.hive_backend.loadbalancer.server.port=8000"
+    environment:
+      - ENVIRONMENT=production
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - CORS_ORIGINS=https://hive.home.deepblack.cloud,http://localhost:3000
+      - DATABASE_URL=postgresql://postgres:hive123@hive_postgres:5432/hive
+      - REDIS_URL=redis://hive_redis:6379
+    ports:
+      - "8087:8000"
+    networks:
+      - tengig
+      - hive-internal
+    volumes:
+      - hive-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  hive_frontend:
+    image: hive-hive-frontend:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=tengig"
+        - "traefik.http.routers.hive_frontend.rule=Host(`hive.home.deepblack.cloud`)"
+        - "traefik.http.routers.hive_frontend.entrypoints=web"
+        - "traefik.http.services.hive_frontend.loadbalancer.server.port=3000"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://hive-api.home.deepblack.cloud
+    ports:
+      - "3001:3000"
+    networks:
+      - tengig
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  hive_postgres:
+    image: postgres:15
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+    environment:
+      - POSTGRES_DB=hive
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=hive123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - hive-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hive"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  hive_redis:
+    image: redis:7-alpine
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+    volumes:
+      - redis-data:/data
+    networks:
+      - hive-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  tengig:
+    external: true
+  hive-internal:
+    driver: overlay
+    internal: true
+
+volumes:
+  hive-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local

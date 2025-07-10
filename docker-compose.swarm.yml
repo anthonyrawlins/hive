@@ -1,7 +1,7 @@
 services:
   # Hive Backend API
   hive-backend:
-    image: anthonyrawlins/hive-backend:latest
+    image: anthonyrawlins/hive-backend:cli-support
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -10,7 +10,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - ENVIRONMENT=production
       - LOG_LEVEL=info
-      - CORS_ORIGINS=https://hive.home.deepblack.cloud
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://hive.home.deepblack.cloud}
     depends_on:
       - postgres
       - redis

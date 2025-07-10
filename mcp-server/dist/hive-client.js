@@ -42,6 +42,31 @@ export class HiveClient {
         const response = await this.api.post('/api/agents', agentData);
         return response.data;
     }
+    // CLI Agent Management
+    async getCliAgents() {
+        const response = await this.api.get('/api/cli-agents/');
+        return response.data || [];
+    }
+    async registerCliAgent(agentData) {
+        const response = await this.api.post('/api/cli-agents/register', agentData);
+        return response.data;
+    }
+    async registerPredefinedCliAgents() {
+        const response = await this.api.post('/api/cli-agents/register-predefined');
+        return response.data;
+    }
+    async healthCheckCliAgent(agentId) {
+        const response = await this.api.post(`/api/cli-agents/${agentId}/health-check`);
+        return response.data;
+    }
+    async getCliAgentStatistics() {
+        const response = await this.api.get('/api/cli-agents/statistics/all');
+        return response.data;
+    }
+    async unregisterCliAgent(agentId) {
+        const response = await this.api.delete(`/api/cli-agents/${agentId}`);
+        return response.data;
+    }
     // Task Management
     async createTask(taskData) {
         const response = await this.api.post('/api/tasks', taskData);
