@@ -10,6 +10,8 @@ interface User {
   username: string;
   email: string;
   full_name?: string;
+  name?: string; // For backward compatibility
+  role?: string; // For backward compatibility
   is_active: boolean;
   is_superuser: boolean;
   is_verified: boolean;

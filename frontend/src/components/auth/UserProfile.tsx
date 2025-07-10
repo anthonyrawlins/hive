@@ -19,7 +19,7 @@ export default function UserProfile({ isDropdown = false, onClose }: UserProfile
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(user?.name || '');
+  const [editedName, setEditedName] = useState(user?.name || user?.full_name || '');
 
   const handleSave = () => {
     // In a real app, this would make an API call to update user profile
@@ -28,7 +28,7 @@ export default function UserProfile({ isDropdown = false, onClose }: UserProfile
   };
 
   const handleCancel = () => {
-    setEditedName(user?.name || '');
+    setEditedName(user?.name || user?.full_name || '');
     setIsEditing(false);
   };
 
@@ -46,10 +46,10 @@ export default function UserProfile({ isDropdown = false, onClose }: UserProfile
         <div className="flex items-center space-x-3 pb-4 border-b">
           <UserCircleIcon className="h-12 w-12 text-gray-400" />
           <div>
-            <p className="font-medium text-gray-900">{user.name}</p>
+            <p className="font-medium text-gray-900">{user.name || user.full_name || user.username}</p>
             <p className="text-sm text-gray-500">@{user.username}</p>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-              {user.role}
+              {user.role || (user.is_superuser ? 'Admin' : 'User')}
             </span>
           </div>
         </div>
@@ -98,10 +98,10 @@ export default function UserProfile({ isDropdown = false, onClose }: UserProfile
               </button>
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">{user.name}</h3>
+              <h3 className="text-xl font-semibold text-gray-900">{user.name || user.full_name || user.username}</h3>
               <p className="text-gray-600">@{user.username}</p>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 mt-2">
-                {user.role}
+                {user.role || (user.is_superuser ? 'Admin' : 'User')}
               </span>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function UserProfile({ isDropdown = false, onClose }: UserProfile
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-900">{user.name}</span>
+                  <span className="text-gray-900">{user.name || user.full_name || user.username}</span>
                   <button
                     onClick={() => setIsEditing(true)}
                     className="text-blue-600 hover:text-blue-800"
@@ -170,7 +170,7 @@ export default function UserProfile({ isDropdown = false, onClose }: UserProfile
                 Role
               </label>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                {user.role}
+                {user.role || (user.is_superuser ? 'Admin' : 'User')}
               </span>
               <p className="text-xs text-gray-500 mt-1">Role is managed by system administrators</p>
             </div>

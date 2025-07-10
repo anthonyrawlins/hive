@@ -24,7 +24,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
       }
 
       // Check role requirements
-      if (requiredRole && user?.role !== requiredRole) {
+      if (requiredRole && (user?.role || (user?.is_superuser ? 'Admin' : 'User')) !== requiredRole) {
         // Redirect to unauthorized or home page
         navigate('/', { replace: true });
         return;
@@ -47,7 +47,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   }
 
   // If role is required but user doesn't have it, don't render
-  if (requiredRole && user?.role !== requiredRole) {
+  if (requiredRole && (user?.role || (user?.is_superuser ? 'Admin' : 'User')) !== requiredRole) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

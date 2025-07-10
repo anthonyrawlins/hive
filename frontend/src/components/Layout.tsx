@@ -172,7 +172,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900 focus:outline-none"
               >
                 <UserCircleIcon className="h-8 w-8 text-gray-400" />
-                <span className="hidden sm:block">{user?.name}</span>
+                <span className="hidden sm:block">{user?.name || user?.full_name || user?.username}</span>
                 <ChevronDownIcon className="h-4 w-4" />
               </button>
               

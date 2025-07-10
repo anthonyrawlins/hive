@@ -35,15 +35,10 @@ export default function Login() {
     setError(null);
 
     try {
-      const success = await login(credentials.username, credentials.password);
-      
-      if (success) {
-        navigate(returnPath);
-      } else {
-        setError('Invalid username or password');
-      }
-    } catch (err) {
-      setError('Login failed. Please try again.');
+      await login(credentials.username, credentials.password);
+      navigate(returnPath);
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
