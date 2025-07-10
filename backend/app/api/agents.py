@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from typing import List, Dict, Any
-from ..core.hive_coordinator import Agent, AgentType
+from ..core.unified_coordinator import Agent, AgentType
 
 router = APIRouter()
 

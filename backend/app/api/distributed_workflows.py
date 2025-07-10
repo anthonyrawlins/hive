@@ -10,15 +10,13 @@ import asyncio
 import logging
 from datetime import datetime
 
-from ..core.distributed_coordinator import DistributedCoordinator, TaskType, TaskPriority
-from ..core.hive_coordinator import HiveCoordinator
+from ..core.unified_coordinator import UnifiedCoordinator, AgentType as TaskType, TaskPriority
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/distributed", tags=["distributed-workflows"])
 
-# Global coordinator instance
-distributed_coordinator: Optional[DistributedCoordinator] = None
+# Use unified coordinator from main application
 
 class WorkflowRequest(BaseModel):
     """Request model for workflow submission"""
@@ -71,39 +69,21 @@ class PerformanceMetrics(BaseModel):
     throughput_per_hour: float
     agent_performance: Dict[str, Dict[str, float]]
 
-async def get_coordinator() -> DistributedCoordinator:
-    """Dependency to get the distributed coordinator instance"""
+async def get_coordinator() -> UnifiedCoordinator:
+    """Dependency to get the unified coordinator instance"""
     # Import here to avoid circular imports
-    from ..main import distributed_coordinator as main_coordinator
-    if main_coordinator is None:
-        raise HTTPException(status_code=503, detail="Distributed coordinator not initialized")
-    return main_coordinator
+    from ..main import unified_coordinator
+    if unified_coordinator is None or not unified_coordinator.is_initialized:
+        raise HTTPException(status_code=503, detail="Unified coordinator not initialized")
+    return unified_coordinator
 
-@router.on_event("startup")
-async def startup_distributed_coordinator():
-    """Initialize the distributed coordinator on startup"""
-    global distributed_coordinator
-    try:
-        distributed_coordinator = DistributedCoordinator()
-        await distributed_coordinator.start()
-        logger.info("Distributed coordinator started successfully")
-    except Exception as e:
-        logger.error(f"Failed to start distributed coordinator: {e}")
-        raise
-
-@router.on_event("shutdown")
-async def shutdown_distributed_coordinator():
-    """Shutdown the distributed coordinator"""
-    global distributed_coordinator
-    if distributed_coordinator:
-        await distributed_coordinator.stop()
-        logger.info("Distributed coordinator stopped")
+# Coordinator lifecycle is managed by main.py
 
 @router.post("/workflows", response_model=Dict[str, str])
 async def submit_workflow(
     workflow: WorkflowRequest,
     background_tasks: BackgroundTasks,
-    coordinator: DistributedCoordinator = Depends(get_coordinator)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator)
 ):
     """
     Submit a new development workflow for distributed execution
@@ -153,7 +133,7 @@ async def submit_workflow(
 @router.get("/workflows/{workflow_id}", response_model=WorkflowStatus)
 async def get_workflow_status(
     workflow_id: str,
-    coordinator: DistributedCoordinator = Depends(get_coordinator)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator)
 ):
     """
     Get detailed status of a specific workflow
@@ -197,7 +177,7 @@ async def get_workflow_status(
 
 @router.get("/cluster/status", response_model=ClusterStatus)
 async def get_cluster_status(
-    coordinator: DistributedCoordinator = Depends(get_coordinator)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator)
 ):
     """
     Get current cluster status and agent information
@@ -215,11 +195,13 @@ async def get_cluster_status(
         healthy_agents = 0
         
         for agent in coordinator.agents.values():
-            if agent.health_status == "healthy":
+            # Check if agent is healthy (recent heartbeat)
+            import time
+            if time.time() - agent.last_heartbeat < 300:  # 5 minutes
                 healthy_agents += 1
             
             total_capacity += agent.max_concurrent
-            current_load += agent.current_load
+            current_load += agent.current_tasks
             
             agents_info.append({
                 "id": agent.id,
@@ -228,11 +210,11 @@ async def get_cluster_status(
                 "gpu_type": agent.gpu_type,
                 "specializations": [spec.value for spec in agent.specializations],
                 "max_concurrent": agent.max_concurrent,
-                "current_load": agent.current_load,
-                "utilization": (agent.current_load / agent.max_concurrent) * 100,
-                "performance_score": round(agent.performance_score, 3),
-                "last_response_time": round(agent.last_response_time, 2),
-                "health_status": agent.health_status
+                "current_load": agent.current_tasks,
+                "utilization": (agent.current_tasks / agent.max_concurrent) * 100 if agent.max_concurrent > 0 else 0,
+                "performance_score": round(coordinator.load_balancer.get_weight(agent.id), 3),
+                "last_response_time": round(agent.performance_history[-1] if agent.performance_history else 0.0, 2),
+                "health_status": "healthy" if time.time() - agent.last_heartbeat < 300 else "unhealthy"
             })
         
         utilization = (current_load / total_capacity) * 100 if total_capacity > 0 else 0
@@ -252,7 +234,7 @@ async def get_cluster_status(
 
 @router.get("/performance/metrics", response_model=PerformanceMetrics)
 async def get_performance_metrics(
-    coordinator: DistributedCoordinator = Depends(get_coordinator)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator)
 ):
     """
     Get comprehensive performance metrics for the distributed system
@@ -293,12 +275,12 @@ async def get_performance_metrics(
         # Agent performance metrics
         agent_performance = {}
         for agent_id, agent in coordinator.agents.items():
-            performance_history = coordinator.performance_history.get(agent_id, [])
+            performance_history = agent.performance_history
             agent_performance[agent_id] = {
                 "avg_response_time": sum(performance_history) / len(performance_history) if performance_history else 0.0,
-                "performance_score": agent.performance_score,
+                "performance_score": coordinator.load_balancer.get_weight(agent_id),
                 "total_tasks": len(performance_history),
-                "current_utilization": (agent.current_load / agent.max_concurrent) * 100
+                "current_utilization": (agent.current_tasks / agent.max_concurrent) * 100 if agent.max_concurrent > 0 else 0
             }
         
         return PerformanceMetrics(
@@ -317,7 +299,7 @@ async def get_performance_metrics(
 @router.post("/workflows/{workflow_id}/cancel")
 async def cancel_workflow(
     workflow_id: str,
-    coordinator: DistributedCoordinator = Depends(get_coordinator)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator)
 ):
     """
     Cancel a running workflow and all its associated tasks
@@ -353,7 +335,7 @@ async def cancel_workflow(
 
 @router.post("/cluster/optimize")
 async def trigger_cluster_optimization(
-    coordinator: DistributedCoordinator = Depends(get_coordinator)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator)
 ):
     """
     Manually trigger cluster optimization
@@ -441,7 +423,7 @@ async def list_workflows(
 @router.get("/agents/{agent_id}/tasks", response_model=List[Dict[str, Any]])
 async def get_agent_tasks(
     agent_id: str,
-    coordinator: DistributedCoordinator = Depends(get_coordinator)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator)
 ):
     """
     Get all tasks assigned to a specific agent
@@ -473,13 +455,14 @@ async def get_agent_tasks(
 
 # Health check endpoint for the distributed system
 @router.get("/health")
-async def health_check(coordinator: DistributedCoordinator = Depends(get_coordinator)):
+async def health_check(coordinator: UnifiedCoordinator = Depends(get_coordinator)):
     """
     Health check for the distributed workflow system
     """
     try:
+        import time
         healthy_agents = sum(1 for agent in coordinator.agents.values() 
-                           if agent.health_status == "healthy")
+                           if time.time() - agent.last_heartbeat < 300)
         total_agents = len(coordinator.agents)
         
         system_health = "healthy" if healthy_agents > 0 else "unhealthy"

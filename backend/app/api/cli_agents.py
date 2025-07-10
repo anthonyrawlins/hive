@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from ..core.database import get_db
 from ..models.agent import Agent as ORMAgent
-from ..core.hive_coordinator import HiveCoordinator, Agent, AgentType
+from ..core.unified_coordinator import UnifiedCoordinator, Agent, AgentType
 from ..cli_agents.cli_agent_manager import get_cli_agent_manager
 
 router = APIRouter(prefix="/api/cli-agents", tags=["cli-agents"])

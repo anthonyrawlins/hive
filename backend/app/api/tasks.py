@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Dict, Any, Optional
 from ..core.auth import get_current_user
-from ..core.hive_coordinator import HiveCoordinator, AgentType, TaskStatus
+from ..core.unified_coordinator import UnifiedCoordinator, AgentType, TaskStatus
 
 router = APIRouter()
 
 # This will be injected by main.py
-hive_coordinator: HiveCoordinator = None
+coordinator: UnifiedCoordinator = None
 
-def set_coordinator(coordinator: HiveCoordinator):
-    global hive_coordinator
-    hive_coordinator = coordinator
+def set_coordinator(coord: UnifiedCoordinator):
+    global coordinator
+    coordinator = coord
 
 @router.post("/tasks")
 async def create_task(task_data: Dict[str, Any]):
@@ -26,7 +26,7 @@ async def create_task(task_data: Dict[str, Any]):
         context = task_data.get("context", {})
         
         # Create task using coordinator
-        task = hive_coordinator.create_task(task_type, context, priority)
+        task = coordinator.create_task(task_type, context, priority)
         
         return {
             "id": task.id,
@@ -42,7 +42,7 @@ async def create_task(task_data: Dict[str, Any]):
 @router.get("/tasks/{task_id}")
 async def get_task(task_id: str, current_user: dict = Depends(get_current_user)):
     """Get details of a specific task"""
-    task = hive_coordinator.get_task_status(task_id)
+    task = coordinator.get_task_status(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
@@ -68,7 +68,7 @@ async def get_tasks(
     """Get list of tasks with optional filtering"""
     
     # Get all tasks from coordinator
-    all_tasks = list(hive_coordinator.tasks.values())
+    all_tasks = list(coordinator.tasks.values())
     
     # Apply filters
     filtered_tasks = all_tasks

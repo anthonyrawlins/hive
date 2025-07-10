@@ -9,17 +9,15 @@ from datetime import datetime
 from pathlib import Path
 import socketio
 
-from .core.hive_coordinator import HiveCoordinator
-from .core.distributed_coordinator import DistributedCoordinator
+from .core.unified_coordinator import UnifiedCoordinator
 from .core.database import engine, get_db, init_database_with_retry, test_database_connection
 from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents, auth
 # from .mcp.distributed_mcp_server import get_mcp_server
 from .models.user import Base
 from .models import agent, project # Import the new agent and project models
 
-# Global coordinator instances
-hive_coordinator = HiveCoordinator()
-distributed_coordinator = DistributedCoordinator()
+# Global unified coordinator instance
+unified_coordinator = UnifiedCoordinator()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,12 +41,9 @@ async def lifespan(app: FastAPI):
         if not test_database_connection():
             raise Exception("Database connection test failed")
         
-        # Initialize coordinators with error handling
-        print("🤖 Initializing AI coordinator...")
-        await hive_coordinator.initialize()
-        
-        print("🌐 Initializing distributed coordinator...")
-        await distributed_coordinator.start()
+        # Initialize unified coordinator with error handling
+        print("🤖 Initializing Unified Coordinator...")
+        await unified_coordinator.start()
         
         # Initialize MCP server
         # print("🔌 Initializing MCP server...")
@@ -56,7 +51,7 @@ async def lifespan(app: FastAPI):
         # await mcp_server.initialize(distributed_coordinator)
         
         startup_success = True
-        print("✅ Hive Orchestrator with distributed workflows started successfully!")
+        print("✅ Hive Orchestrator with Unified Coordinator started successfully!")
         
         yield
         
@@ -65,8 +60,7 @@ async def lifespan(app: FastAPI):
         if startup_success:
             # If we got past startup, try to shutdown cleanly
             try:
-                await hive_coordinator.shutdown()
-                await distributed_coordinator.stop()
+                await unified_coordinator.shutdown()
             except Exception as shutdown_error:
                 print(f"Shutdown error during startup failure: {shutdown_error}")
         raise
@@ -75,8 +69,7 @@ async def lifespan(app: FastAPI):
         # Shutdown
         print("🛑 Shutting down Hive Orchestrator...")
         try:
-            await hive_coordinator.shutdown()
-            await distributed_coordinator.stop()
+            await unified_coordinator.shutdown()
             print("✅ Hive Orchestrator stopped")
         except Exception as e:
             print(f"❌ Shutdown error: {e}")
@@ -116,7 +109,7 @@ app.include_router(distributed_workflows.router, tags=["distributed-workflows"])
 app.include_router(cli_agents.router, tags=["cli-agents"])
 
 # Set coordinator reference in tasks module
-tasks.set_coordinator(hive_coordinator)
+tasks.set_coordinator(unified_coordinator)
 
 # Socket.IO server setup
 sio = socketio.AsyncServer(
@@ -268,7 +261,7 @@ async def health_check():
     
     # Test coordinator health
     try:
-        coordinator_status = await hive_coordinator.get_health_status()
+        coordinator_status = await unified_coordinator.get_health_status()
         health_status["components"]["coordinator"] = coordinator_status.get("status", "unknown")
         health_status["components"]["agents"] = coordinator_status.get("agents", {})
     except Exception as e:
@@ -284,17 +277,19 @@ async def health_check():
 @app.get("/api/status")
 async def get_system_status():
     """Get comprehensive system status"""
-    return await hive_coordinator.get_comprehensive_status()
+    return await unified_coordinator.get_comprehensive_status()
 
 @app.get("/api/metrics")
 async def get_metrics():
     """Prometheus metrics endpoint"""
-    return await hive_coordinator.get_prometheus_metrics()
+    return await unified_coordinator.get_prometheus_metrics()
 
-# Make manager and coordinators available to other modules
+# Make manager and coordinator available to other modules
 app.state.socketio_manager = manager
-app.state.hive_coordinator = hive_coordinator
-app.state.distributed_coordinator = distributed_coordinator
+app.state.unified_coordinator = unified_coordinator
+# Backward compatibility aliases
+app.state.hive_coordinator = unified_coordinator
+app.state.distributed_coordinator = unified_coordinator
 
 # Create Socket.IO ASGI app
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app, socketio_path='/socket.io')
