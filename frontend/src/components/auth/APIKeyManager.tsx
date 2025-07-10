@@ -178,10 +178,10 @@ export const APIKeyManager: React.FC = () => {
     }
   };
 
-  const handleScopeChange = (scope: string, checked: boolean) => {
+  const handleScopeChange = (scope: string, checked: boolean | 'indeterminate') => {
     setCreateForm(prev => ({
       ...prev,
-      scopes: checked 
+      scopes: checked === true
         ? [...prev.scopes, scope]
         : prev.scopes.filter(s => s !== scope)
     }));
