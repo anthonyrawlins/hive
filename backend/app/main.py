@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import socketio
 
-from .core.unified_coordinator import UnifiedCoordinator
+from .core.unified_coordinator_refactored import UnifiedCoordinatorRefactored as UnifiedCoordinator
 from .core.database import engine, get_db, init_database_with_retry, test_database_connection
 from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents, auth
 from .models.user import Base
