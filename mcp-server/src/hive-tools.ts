@@ -40,12 +40,52 @@ export class HiveTools {
             model: { type: 'string', description: 'Model name (e.g., codellama:34b)' },
             specialty: { 
               type: 'string', 
-              enum: ['kernel_dev', 'pytorch_dev', 'profiler', 'docs_writer', 'tester'],
+              enum: ['kernel_dev', 'pytorch_dev', 'profiler', 'docs_writer', 'tester', 'cli_gemini', 'general_ai', 'reasoning'],
               description: 'Agent specialization area' 
             },
             max_concurrent: { type: 'number', description: 'Maximum concurrent tasks', default: 2 },
           },
           required: ['id', 'endpoint', 'model', 'specialty'],
+        },
+      },
+      {
+        name: 'hive_register_cli_agent',
+        description: 'Register a new CLI-based AI agent (e.g., Gemini CLI) in the Hive cluster',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Unique CLI agent identifier' },
+            host: { type: 'string', description: 'SSH hostname (e.g., walnut, ironwood)' },
+            node_version: { type: 'string', description: 'Node.js version (e.g., v22.14.0)' },
+            model: { type: 'string', description: 'Model name (e.g., gemini-2.5-pro)', default: 'gemini-2.5-pro' },
+            specialization: { 
+              type: 'string', 
+              enum: ['general_ai', 'reasoning', 'code_analysis', 'documentation', 'testing'],
+              description: 'CLI agent specialization',
+              default: 'general_ai'
+            },
+            max_concurrent: { type: 'number', description: 'Maximum concurrent tasks', default: 2 },
+            agent_type: { type: 'string', description: 'CLI agent type', default: 'gemini' },
+            command_timeout: { type: 'number', description: 'Command timeout in seconds', default: 60 },
+            ssh_timeout: { type: 'number', description: 'SSH timeout in seconds', default: 5 },
+          },
+          required: ['id', 'host', 'node_version'],
+        },
+      },
+      {
+        name: 'hive_get_cli_agents',
+        description: 'Get all registered CLI agents in the Hive cluster',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'hive_register_predefined_cli_agents',
+        description: 'Register predefined CLI agents (walnut-gemini, ironwood-gemini) with verified configurations',
+        inputSchema: {
+          type: 'object',
+          properties: {},
         },
       },
 
@@ -58,7 +98,7 @@ export class HiveTools {
           properties: {
             type: { 
               type: 'string',
-              enum: ['kernel_dev', 'pytorch_dev', 'profiler', 'docs_writer', 'tester'],
+              enum: ['kernel_dev', 'pytorch_dev', 'profiler', 'docs_writer', 'tester', 'cli_gemini', 'general_ai', 'reasoning'],
               description: 'Type of development task' 
             },
             priority: { 
@@ -204,7 +244,7 @@ export class HiveTools {
               items: {
                 type: 'object',
                 properties: {
-                  specialization: { type: 'string', enum: ['kernel_dev', 'pytorch_dev', 'profiler', 'docs_writer', 'tester'] },
+                  specialization: { type: 'string', enum: ['kernel_dev', 'pytorch_dev', 'profiler', 'docs_writer', 'tester', 'cli_gemini', 'general_ai', 'reasoning'] },
                   task_description: { type: 'string' },
                   dependencies: { type: 'array', items: { type: 'string' } },
                   priority: { type: 'number', minimum: 1, maximum: 5 }
@@ -254,6 +294,15 @@ export class HiveTools {
         
         case 'hive_register_agent':
           return await this.registerAgent(args);
+        
+        case 'hive_register_cli_agent':
+          return await this.registerCliAgent(args);
+        
+        case 'hive_get_cli_agents':
+          return await this.getCliAgents();
+        
+        case 'hive_register_predefined_cli_agents':
+          return await this.registerPredefinedCliAgents();
 
         // Task Management
         case 'hive_create_task':
@@ -313,20 +362,48 @@ export class HiveTools {
 
   private async getAgents() {
     const agents = await this.hiveClient.getAgents();
+    
+    // Group agents by type
+    const ollamaAgents = agents.filter(agent => !agent.agent_type || agent.agent_type === 'ollama');
+    const cliAgents = agents.filter(agent => agent.agent_type === 'cli');
+    
+    const formatAgent = (agent: any) => {
+      const typeIcon = agent.agent_type === 'cli' ? '⚡' : '🤖';
+      const typeLabel = agent.agent_type === 'cli' ? 'CLI' : 'API';
+      
+      return `${typeIcon} **${agent.id}** (${agent.specialty}) [${typeLabel}]\n` +
+             `   • Model: ${agent.model}\n` +
+             `   • Endpoint: ${agent.endpoint}\n` +
+             `   • Status: ${agent.status}\n` +
+             `   • Tasks: ${agent.current_tasks}/${agent.max_concurrent}\n`;
+    };
+    
+    let text = `📋 **Hive Cluster Agents** (${agents.length} total)\n\n`;
+    
+    if (ollamaAgents.length > 0) {
+      text += `🤖 **Ollama Agents** (${ollamaAgents.length}):\n`;
+      text += ollamaAgents.map(formatAgent).join('\n') + '\n';
+    }
+    
+    if (cliAgents.length > 0) {
+      text += `⚡ **CLI Agents** (${cliAgents.length}):\n`;
+      text += cliAgents.map(formatAgent).join('\n') + '\n';
+    }
+    
+    if (agents.length === 0) {
+      text += 'No agents registered yet.\n\n';
+      text += '**Getting Started:**\n';
+      text += '• Use `hive_register_agent` for Ollama agents\n';
+      text += '• Use `hive_register_cli_agent` for CLI agents\n';
+      text += '• Use `hive_register_predefined_cli_agents` for quick CLI setup\n';
+      text += '• Use `hive_bring_online` for auto-discovery';
+    }
+    
     return {
       content: [
         {
           type: 'text',
-          text: `📋 Hive Cluster Agents (${agents.length} total):\n\n${agents.length > 0 
-            ? agents.map(agent => 
-                `🤖 **${agent.id}** (${agent.specialty})\n` +
-                `   • Model: ${agent.model}\n` +
-                `   • Endpoint: ${agent.endpoint}\n` +
-                `   • Status: ${agent.status}\n` +
-                `   • Tasks: ${agent.current_tasks}/${agent.max_concurrent}\n`
-              ).join('\n')
-            : 'No agents registered yet. Use hive_register_agent to add agents to the cluster.'
-          }`,
+          text,
         },
       ],
     };
@@ -656,6 +733,147 @@ export class HiveTools {
                   `• The Hive backend is running\n` +
                   `• The auto-discovery script exists at /home/tony/AI/projects/hive/scripts/auto_discover_agents.py\n` +
                   `• Python3 is available and required dependencies are installed`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  private async registerCliAgent(args: any) {
+    try {
+      const result = await this.hiveClient.registerCliAgent(args);
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `✅ **CLI Agent Registered Successfully!**\n\n` +
+                  `⚡ **Agent Details:**\n` +
+                  `• ID: **${args.id}**\n` +
+                  `• Host: ${args.host}\n` +
+                  `• Specialization: ${args.specialization}\n` +
+                  `• Model: ${args.model}\n` +
+                  `• Node Version: ${args.node_version}\n` +
+                  `• Max Concurrent: ${args.max_concurrent || 2}\n` +
+                  `• Endpoint: ${result.endpoint}\n\n` +
+                  `🔍 **Health Check:**\n` +
+                  `• SSH: ${result.health_check?.ssh_healthy ? '✅ Connected' : '❌ Failed'}\n` +
+                  `• CLI: ${result.health_check?.cli_healthy ? '✅ Working' : '❌ Failed'}\n` +
+                  `${result.health_check?.response_time ? `• Response Time: ${result.health_check.response_time.toFixed(2)}s\n` : ''}` +
+                  `\n🎯 **Ready for Tasks!** The CLI agent is now available for distributed AI coordination.`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ **Failed to register CLI agent**\n\n` +
+                  `Error: ${error instanceof Error ? error.message : String(error)}\n\n` +
+                  `**Troubleshooting:**\n` +
+                  `• Verify SSH connectivity to ${args.host}\n` +
+                  `• Ensure Gemini CLI is installed and accessible\n` +
+                  `• Check Node.js version ${args.node_version} is available\n` +
+                  `• Confirm Hive backend is running and accessible`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  private async getCliAgents() {
+    try {
+      const cliAgents = await this.hiveClient.getCliAgents();
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `⚡ **CLI Agents** (${cliAgents.length} total)\n\n${cliAgents.length > 0
+              ? cliAgents.map((agent: any) => 
+                  `⚡ **${agent.id}** (${agent.specialization})\n` +
+                  `   • Model: ${agent.model}\n` +
+                  `   • Host: ${agent.cli_config?.host || 'Unknown'}\n` +
+                  `   • Node Version: ${agent.cli_config?.node_version || 'Unknown'}\n` +
+                  `   • Status: ${agent.status}\n` +
+                  `   • Tasks: ${agent.current_tasks}/${agent.max_concurrent}\n` +
+                  `   • Endpoint: ${agent.endpoint}\n`
+                ).join('\n')
+              : 'No CLI agents registered yet.\n\n' +
+                '**Getting Started:**\n' +
+                '• Use `hive_register_cli_agent` to register individual CLI agents\n' +
+                '• Use `hive_register_predefined_cli_agents` to register walnut-gemini and ironwood-gemini automatically'
+            }`,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ **Failed to get CLI agents**\n\n` +
+                  `Error: ${error instanceof Error ? error.message : String(error)}\n\n` +
+                  `Please ensure the Hive backend is running and accessible.`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+
+  private async registerPredefinedCliAgents() {
+    try {
+      const result = await this.hiveClient.registerPredefinedCliAgents();
+      
+      const successCount = result.results.filter((r: any) => r.status === 'success').length;
+      const existingCount = result.results.filter((r: any) => r.status === 'already_exists').length;
+      const failedCount = result.results.filter((r: any) => r.status === 'failed').length;
+      
+      let text = `⚡ **Predefined CLI Agents Registration Complete**\n\n`;
+      text += `📊 **Summary:**\n`;
+      text += `• Successfully registered: ${successCount}\n`;
+      text += `• Already existed: ${existingCount}\n`;
+      text += `• Failed: ${failedCount}\n\n`;
+      
+      text += `📋 **Results:**\n`;
+      for (const res of result.results) {
+        const statusIcon = res.status === 'success' ? '✅' : 
+                          res.status === 'already_exists' ? '📋' : '❌';
+        text += `${statusIcon} **${res.agent_id}**: ${res.message || res.error || res.status}\n`;
+      }
+      
+      if (successCount > 0) {
+        text += `\n🎯 **Ready for Action!** The CLI agents are now available for:\n`;
+        text += `• General AI tasks (walnut-gemini)\n`;
+        text += `• Advanced reasoning (ironwood-gemini)\n`;
+        text += `• Mixed agent coordination\n`;
+        text += `• Hybrid local/cloud AI orchestration`;
+      }
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ **Failed to register predefined CLI agents**\n\n` +
+                  `Error: ${error instanceof Error ? error.message : String(error)}\n\n` +
+                  `**Troubleshooting:**\n` +
+                  `• Ensure WALNUT and IRONWOOD are accessible via SSH\n` +
+                  `• Verify Gemini CLI is installed on both machines\n` +
+                  `• Check that Node.js v22.14.0 (WALNUT) and v22.17.0 (IRONWOOD) are available\n` +
+                  `• Confirm Hive backend is running with CLI agent support`,
           },
         ],
         isError: true,

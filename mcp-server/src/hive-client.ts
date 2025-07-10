@@ -21,6 +21,17 @@ export interface Agent {
   status: 'available' | 'busy' | 'offline';
   current_tasks: number;
   max_concurrent: number;
+  agent_type?: 'ollama' | 'cli';
+  cli_config?: {
+    host?: string;
+    node_version?: string;
+    model?: string;
+    specialization?: string;
+    max_concurrent?: number;
+    command_timeout?: number;
+    ssh_timeout?: number;
+    agent_type?: string;
+  };
 }
 
 export interface Task {
@@ -94,6 +105,47 @@ export class HiveClient {
 
   async registerAgent(agentData: Partial<Agent>): Promise<{ agent_id: string }> {
     const response = await this.api.post('/api/agents', agentData);
+    return response.data;
+  }
+
+  // CLI Agent Management
+  async getCliAgents(): Promise<Agent[]> {
+    const response = await this.api.get('/api/cli-agents/');
+    return response.data || [];
+  }
+
+  async registerCliAgent(agentData: {
+    id: string;
+    host: string;
+    node_version: string;
+    model?: string;
+    specialization?: string;
+    max_concurrent?: number;
+    agent_type?: string;
+    command_timeout?: number;
+    ssh_timeout?: number;
+  }): Promise<{ agent_id: string; endpoint: string; health_check?: any }> {
+    const response = await this.api.post('/api/cli-agents/register', agentData);
+    return response.data;
+  }
+
+  async registerPredefinedCliAgents(): Promise<{ results: any[] }> {
+    const response = await this.api.post('/api/cli-agents/register-predefined');
+    return response.data;
+  }
+
+  async healthCheckCliAgent(agentId: string): Promise<any> {
+    const response = await this.api.post(`/api/cli-agents/${agentId}/health-check`);
+    return response.data;
+  }
+
+  async getCliAgentStatistics(): Promise<any> {
+    const response = await this.api.get('/api/cli-agents/statistics/all');
+    return response.data;
+  }
+
+  async unregisterCliAgent(agentId: string): Promise<{ success: boolean }> {
+    const response = await this.api.delete(`/api/cli-agents/${agentId}`);
     return response.data;
   }
 
