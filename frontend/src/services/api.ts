@@ -160,7 +160,7 @@ export const executionApi = {
 
 // Agent API
 export const agentApi = {
-  // Get all agents
+  // Get all agents (both Ollama and CLI)
   getAgents: async () => {
     const response = await api.get('/agents');
     return response.data;
@@ -172,9 +172,55 @@ export const agentApi = {
     return response.data;
   },
 
-  // Register new agent
+  // Register new Ollama agent
   registerAgent: async (agentData: any) => {
     const response = await api.post('/agents', agentData);
+    return response.data;
+  },
+
+  // CLI Agent Management
+  getCliAgents: async () => {
+    const response = await api.get('/cli-agents/');
+    return response.data;
+  },
+
+  // Register new CLI agent
+  registerCliAgent: async (cliAgentData: {
+    id: string;
+    host: string;
+    node_version: string;
+    model?: string;
+    specialization?: string;
+    max_concurrent?: number;
+    agent_type?: string;
+    command_timeout?: number;
+    ssh_timeout?: number;
+  }) => {
+    const response = await api.post('/cli-agents/register', cliAgentData);
+    return response.data;
+  },
+
+  // Register predefined CLI agents (walnut-gemini, ironwood-gemini)
+  registerPredefinedCliAgents: async () => {
+    const response = await api.post('/cli-agents/register-predefined');
+    return response.data;
+  },
+
+  // Health check for CLI agent
+  healthCheckCliAgent: async (agentId: string) => {
+    const response = await api.post(`/cli-agents/${agentId}/health-check`);
+    return response.data;
+  },
+
+  // Get CLI agent statistics
+  getCliAgentStatistics: async () => {
+    const response = await api.get('/cli-agents/statistics/all');
+    return response.data;
+  },
+
+  // Unregister CLI agent
+  unregisterCliAgent: async (agentId: string) => {
+    const response = await api.delete(`/cli-agents/${agentId}`);
     return response.data;
   },
 };
