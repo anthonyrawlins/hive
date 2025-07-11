@@ -33,7 +33,7 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: str
     username: str
     email: str
     full_name: Optional[str]
@@ -63,7 +63,7 @@ class APIKeyCreate(BaseModel):
 
 
 class APIKeyResponse(BaseModel):
-    id: int
+    id: str
     name: str
     key_prefix: str
     scopes: List[str]
@@ -198,7 +198,7 @@ async def refresh_token(
                 detail="Invalid token type"
             )
         
-        user_id = int(payload.get("sub"))
+        user_id = payload.get("sub")
         jti = payload.get("jti")
         
         # Check if refresh token exists and is valid

@@ -10,8 +10,24 @@ from datetime import datetime, timedelta
 import uuid
 
 from ..models.task import Task as ORMTask
-from ..core.unified_coordinator import Task as CoordinatorTask, TaskStatus, AgentType
 from ..core.database import SessionLocal
+from typing import Dict, List, Optional, Any
+from enum import Enum
+
+# Define these locally to avoid circular imports
+class TaskStatus(Enum):
+    PENDING = "pending"
+    ASSIGNED = "assigned"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class AgentType(Enum):
+    PYTHON = "python"
+    JAVASCRIPT = "javascript"
+    BASH = "bash"
+    SQL = "sql"
 
 
 class TaskService:
@@ -20,35 +36,35 @@ class TaskService:
     def __init__(self):
         pass
     
-    def create_task(self, coordinator_task: CoordinatorTask) -> ORMTask:
+    def initialize(self):
+        """Initialize the task service - placeholder for any setup needed"""
+        pass
+    
+    def create_task(self, task_data: Dict[str, Any]) -> ORMTask:
         """Create a task in the database from a coordinator task"""
         with SessionLocal() as db:
             try:
-                # Convert coordinator task to database task
+                # Create task from data dictionary
                 db_task = ORMTask(
-                    id=uuid.UUID(coordinator_task.id) if isinstance(coordinator_task.id, str) else coordinator_task.id,
-                    title=coordinator_task.context.get('title', f"Task {coordinator_task.type.value}"),
-                    description=coordinator_task.context.get('description', ''),
-                    priority=coordinator_task.priority,
-                    status=coordinator_task.status.value,
-                    assigned_agent_id=coordinator_task.assigned_agent,
-                    workflow_id=uuid.UUID(coordinator_task.workflow_id) if coordinator_task.workflow_id else None,
-                    metadata={
-                        'type': coordinator_task.type.value,
-                        'context': coordinator_task.context,
-                        'payload': coordinator_task.payload,
-                        'dependencies': coordinator_task.dependencies,
-                        'created_at': coordinator_task.created_at,
-                        'completed_at': coordinator_task.completed_at,
-                        'result': coordinator_task.result
+                    id=uuid.UUID(task_data['id']) if isinstance(task_data.get('id'), str) else task_data.get('id', uuid.uuid4()),
+                    title=task_data.get('title', f"Task {task_data.get('type', 'unknown')}"),
+                    description=task_data.get('description', ''),
+                    priority=task_data.get('priority', 5),
+                    status=task_data.get('status', 'pending'),
+                    assigned_agent_id=task_data.get('assigned_agent'),
+                    workflow_id=uuid.UUID(task_data['workflow_id']) if task_data.get('workflow_id') else None,
+                    task_metadata={
+                        'context': task_data.get('context', {}),
+                        'payload': task_data.get('payload', {}),
+                        'type': task_data.get('type', 'unknown')
                     }
                 )
                 
-                if coordinator_task.status == TaskStatus.IN_PROGRESS and coordinator_task.created_at:
-                    db_task.started_at = datetime.fromtimestamp(coordinator_task.created_at)
+                if task_data.get('status') == 'in_progress' and task_data.get('started_at'):
+                    db_task.started_at = datetime.fromisoformat(task_data['started_at']) if isinstance(task_data['started_at'], str) else task_data['started_at']
                     
-                if coordinator_task.status == TaskStatus.COMPLETED and coordinator_task.completed_at:
-                    db_task.completed_at = datetime.fromtimestamp(coordinator_task.completed_at)
+                if task_data.get('status') == 'completed' and task_data.get('completed_at'):
+                    db_task.completed_at = datetime.fromisoformat(task_data['completed_at']) if isinstance(task_data['completed_at'], str) else task_data['completed_at']
                 
                 db.add(db_task)
                 db.commit()
@@ -60,7 +76,7 @@ class TaskService:
                 db.rollback()
                 raise e
     
-    def update_task(self, task_id: str, coordinator_task: CoordinatorTask) -> Optional[ORMTask]:
+    def update_task(self, task_id: str, task_data: Dict[str, Any]) -> Optional[ORMTask]:
         """Update a task in the database"""
         with SessionLocal() as db:
             try:
@@ -71,29 +87,27 @@ class TaskService:
                 if not db_task:
                     return None
                 
-                # Update fields from coordinator task
-                db_task.title = coordinator_task.context.get('title', db_task.title)
-                db_task.description = coordinator_task.context.get('description', db_task.description)
-                db_task.priority = coordinator_task.priority
-                db_task.status = coordinator_task.status.value
-                db_task.assigned_agent_id = coordinator_task.assigned_agent
+                # Update fields from task data
+                db_task.title = task_data.get('title', db_task.title)
+                db_task.description = task_data.get('description', db_task.description)
+                db_task.priority = task_data.get('priority', db_task.priority)
+                db_task.status = task_data.get('status', db_task.status)
+                db_task.assigned_agent_id = task_data.get('assigned_agent', db_task.assigned_agent_id)
                 
-                # Update metadata
-                db_task.metadata = {
-                    'type': coordinator_task.type.value,
-                    'context': coordinator_task.context,
-                    'payload': coordinator_task.payload,
-                    'dependencies': coordinator_task.dependencies,
-                    'created_at': coordinator_task.created_at,
-                    'completed_at': coordinator_task.completed_at,
-                    'result': coordinator_task.result
-                }
+                # Update metadata with context and payload
+                current_metadata = db_task.task_metadata or {}
+                current_metadata.update({
+                    'context': task_data.get('context', current_metadata.get('context', {})),
+                    'payload': task_data.get('payload', current_metadata.get('payload', {})),
+                    'type': task_data.get('type', current_metadata.get('type', 'unknown'))
+                })
+                db_task.task_metadata = current_metadata
                 
                 # Update timestamps based on status
-                if coordinator_task.status == TaskStatus.IN_PROGRESS and not db_task.started_at:
+                if task_data.get('status') == 'in_progress' and not db_task.started_at:
                     db_task.started_at = datetime.utcnow()
                     
-                if coordinator_task.status == TaskStatus.COMPLETED and not db_task.completed_at:
+                if task_data.get('status') == 'completed' and not db_task.completed_at:
                     db_task.completed_at = datetime.utcnow()
                 
                 db.commit()
@@ -170,36 +184,24 @@ class TaskService:
                 db.rollback()
                 raise e
     
-    def coordinator_task_from_orm(self, orm_task: ORMTask) -> CoordinatorTask:
-        """Convert ORM task back to coordinator task"""
-        metadata = orm_task.metadata or {}
-        
-        # Extract fields from metadata
-        task_type = AgentType(metadata.get('type', 'general_ai'))
-        context = metadata.get('context', {})
-        payload = metadata.get('payload', {})
-        dependencies = metadata.get('dependencies', [])
-        result = metadata.get('result')
-        created_at = metadata.get('created_at', orm_task.created_at.timestamp() if orm_task.created_at else None)
-        completed_at = metadata.get('completed_at')
-        
-        # Convert status
-        status = TaskStatus(orm_task.status) if orm_task.status in [s.value for s in TaskStatus] else TaskStatus.PENDING
-        
-        return CoordinatorTask(
-            id=str(orm_task.id),
-            type=task_type,
-            priority=orm_task.priority,
-            status=status,
-            context=context,
-            payload=payload,
-            assigned_agent=orm_task.assigned_agent_id,
-            result=result,
-            created_at=created_at,
-            completed_at=completed_at,
-            workflow_id=str(orm_task.workflow_id) if orm_task.workflow_id else None,
-            dependencies=dependencies
-        )
+    def coordinator_task_from_orm(self, orm_task: ORMTask) -> Dict[str, Any]:
+        """Convert ORM task back to coordinator task data"""        
+        metadata = orm_task.task_metadata or {}
+        return {
+            'id': str(orm_task.id),
+            'title': orm_task.title,
+            'description': orm_task.description,
+            'type': metadata.get('type', 'unknown'),
+            'priority': orm_task.priority,
+            'status': orm_task.status,
+            'context': metadata.get('context', {}),
+            'payload': metadata.get('payload', {}),
+            'assigned_agent': orm_task.assigned_agent_id,
+            'workflow_id': str(orm_task.workflow_id) if orm_task.workflow_id else None,
+            'created_at': orm_task.created_at.isoformat() if orm_task.created_at else None,
+            'started_at': orm_task.started_at.isoformat() if orm_task.started_at else None,
+            'completed_at': orm_task.completed_at.isoformat() if orm_task.completed_at else None
+        }
     
     def get_task_statistics(self) -> Dict[str, Any]:
         """Get task statistics"""

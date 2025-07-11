@@ -27,8 +27,8 @@ class Task(Base):
     workflow_id = Column(SqlUUID(as_uuid=True), ForeignKey("workflows.id"), nullable=True)
     execution_id = Column(SqlUUID(as_uuid=True), ForeignKey("executions.id"), nullable=True)
     
-    # Metadata and context
-    metadata = Column(JSONB, nullable=True)
+    # Task metadata (includes context and payload)
+    task_metadata = Column("metadata", JSONB, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

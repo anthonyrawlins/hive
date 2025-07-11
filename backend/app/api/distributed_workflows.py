@@ -10,13 +10,16 @@ import asyncio
 import logging
 from datetime import datetime
 
-from ..core.unified_coordinator import UnifiedCoordinator, AgentType as TaskType, TaskPriority
+from ..core.unified_coordinator_refactored import UnifiedCoordinatorRefactored as UnifiedCoordinator
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/distributed", tags=["distributed-workflows"])
 
-# Use unified coordinator from main application
+# Dependency function for coordinator injection (will be imported by main)
+def get_coordinator() -> UnifiedCoordinator:
+    """This will be overridden by main.py dependency injection"""
+    pass
 
 class WorkflowRequest(BaseModel):
     """Request model for workflow submission"""

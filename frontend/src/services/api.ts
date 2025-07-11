@@ -4,7 +4,7 @@ import { Workflow, WorkflowExecution } from '../types/workflow';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.VITE_API_BASE_URL || 'http://localhost:8087',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -14,7 +14,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Add auth token if available
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -31,7 +31,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized access
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -148,12 +149,36 @@ export const executionApi = {
 
   // Cancel an execution
   cancelExecution: async (id: string): Promise<void> => {
-    await api.post(`/executions/${id}/cancel`);
+    await api.post(`/api/executions/${id}/cancel`);
   },
 
   // Retry an execution
   retryExecution: async (id: string): Promise<WorkflowExecution> => {
-    const response = await api.post(`/executions/${id}/retry`);
+    const response = await api.post(`/api/executions/${id}/retry`);
+    return response.data;
+  },
+
+  // Pause an execution
+  pauseExecution: async (id: string): Promise<WorkflowExecution> => {
+    const response = await api.post(`/api/executions/${id}/pause`);
+    return response.data;
+  },
+
+  // Resume an execution
+  resumeExecution: async (id: string): Promise<WorkflowExecution> => {
+    const response = await api.post(`/api/executions/${id}/resume`);
+    return response.data;
+  },
+
+  // Get execution logs
+  getExecutionLogs: async (id: string): Promise<any[]> => {
+    const response = await api.get(`/api/executions/${id}/logs`);
+    return response.data;
+  },
+
+  // Get execution steps
+  getExecutionSteps: async (id: string): Promise<any[]> => {
+    const response = await api.get(`/api/executions/${id}/steps`);
     return response.data;
   },
 };
@@ -229,19 +254,54 @@ export const agentApi = {
 export const systemApi = {
   // Get system status
   getStatus: async () => {
-    const response = await api.get('/status');
+    const response = await api.get('/api/status');
     return response.data;
   },
 
   // Get system health
   getHealth: async () => {
-    const response = await api.get('/health');
+    const response = await api.get('/api/health');
     return response.data;
   },
 
   // Get system metrics
   getMetrics: async () => {
-    const response = await api.get('/metrics');
+    const response = await api.get('/api/metrics');
+    return response.data;
+  },
+
+  // Get system configuration
+  getConfig: async () => {
+    const response = await api.get('/api/config');
+    return response.data;
+  },
+
+  // Update system configuration
+  updateConfig: async (config: Record<string, any>) => {
+    const response = await api.put('/api/config', config);
+    return response.data;
+  },
+
+  // Get system logs
+  getLogs: async (params?: {
+    level?: string;
+    component?: string;
+    start_time?: string;
+    end_time?: string;
+    limit?: number;
+  }) => {
+    const response = await api.get('/api/logs', { params });
+    return response.data;
+  },
+
+  // System control
+  restart: async () => {
+    const response = await api.post('/api/system/restart');
+    return response.data;
+  },
+
+  shutdown: async () => {
+    const response = await api.post('/api/system/shutdown');
     return response.data;
   },
 };
@@ -250,43 +310,70 @@ export const systemApi = {
 export const clusterApi = {
   // Get cluster overview
   getOverview: async () => {
-    const response = await api.get('/cluster/overview');
+    const response = await api.get('/api/cluster/overview');
     return response.data;
   },
 
   // Get cluster nodes
   getNodes: async () => {
-    const response = await api.get('/cluster/nodes');
+    const response = await api.get('/api/cluster/nodes');
     return response.data;
   },
 
   // Get node details
   getNode: async (nodeId: string) => {
-    const response = await api.get(`/cluster/nodes/${nodeId}`);
+    const response = await api.get(`/api/cluster/nodes/${nodeId}`);
     return response.data;
   },
 
   // Get available models
   getModels: async () => {
-    const response = await api.get('/cluster/models');
+    const response = await api.get('/api/cluster/models');
     return response.data;
   },
 
   // Get n8n workflows
   getWorkflows: async () => {
-    const response = await api.get('/cluster/workflows');
+    const response = await api.get('/api/cluster/workflows');
     return response.data;
   },
 
   // Get cluster metrics
   getMetrics: async () => {
-    const response = await api.get('/cluster/metrics');
+    const response = await api.get('/api/cluster/metrics');
     return response.data;
   },
 
   // Get workflow executions
   getExecutions: async (limit: number = 10) => {
-    const response = await api.get(`/cluster/executions?limit=${limit}`);
+    const response = await api.get(`/api/cluster/executions?limit=${limit}`);
+    return response.data;
+  },
+
+  // Add/remove cluster nodes
+  addNode: async (nodeData: any) => {
+    const response = await api.post('/api/cluster/nodes', nodeData);
+    return response.data;
+  },
+
+  removeNode: async (nodeId: string) => {
+    const response = await api.delete(`/api/cluster/nodes/${nodeId}`);
+    return response.data;
+  },
+
+  // Node control
+  startNode: async (nodeId: string) => {
+    const response = await api.post(`/api/cluster/nodes/${nodeId}/start`);
+    return response.data;
+  },
+
+  stopNode: async (nodeId: string) => {
+    const response = await api.post(`/api/cluster/nodes/${nodeId}/stop`);
+    return response.data;
+  },
+
+  restartNode: async (nodeId: string) => {
+    const response = await api.post(`/api/cluster/nodes/${nodeId}/restart`);
     return response.data;
   },
 };

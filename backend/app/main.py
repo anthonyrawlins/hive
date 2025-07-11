@@ -5,18 +5,18 @@ from contextlib import asynccontextmanager
 import json
 import asyncio
 import uvicorn
+import os
 from datetime import datetime
 from pathlib import Path
 import socketio
 
 from .core.unified_coordinator_refactored import UnifiedCoordinatorRefactored as UnifiedCoordinator
 from .core.database import engine, get_db, init_database_with_retry, test_database_connection
-from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents, auth
 from .models.user import Base
 from .models import agent, project # Import the new agent and project models
 
-# Global unified coordinator instance
-unified_coordinator = UnifiedCoordinator()
+# Global unified coordinator instance (will be initialized in lifespan)
+unified_coordinator: UnifiedCoordinator = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +35,11 @@ async def lifespan(app: FastAPI):
         print("🔐 Initializing authentication system...")
         from .core.init_db import initialize_database
         initialize_database()
+        
+        # Initialize coordinator instance
+        print("🔧 Initializing unified coordinator...")
+        global unified_coordinator
+        unified_coordinator = UnifiedCoordinator()
         
         # Test database connection
         if not test_database_connection():
@@ -77,19 +82,27 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Enhanced CORS configuration for production
+# Enhanced CORS configuration with environment variable support
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001,https://hive.home.deepblack.cloud,http://hive.home.deepblack.cloud")
+allowed_origins = [origin.strip() for origin in cors_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://localhost:3001",
-        "https://hive.home.deepblack.cloud",
-        "http://hive.home.deepblack.cloud"
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Dependency injection for unified coordinator
+def get_coordinator() -> UnifiedCoordinator:
+    """Dependency injection for getting the unified coordinator instance"""
+    if unified_coordinator is None:
+        raise HTTPException(status_code=503, detail="Coordinator not initialized")
+    return unified_coordinator
+
+# Import API routers
+from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents, auth
 
 # Include API routes
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
@@ -103,8 +116,11 @@ app.include_router(cluster.router, prefix="/api", tags=["cluster"])
 app.include_router(distributed_workflows.router, tags=["distributed-workflows"])
 app.include_router(cli_agents.router, tags=["cli-agents"])
 
-# Set coordinator reference in tasks module
-tasks.set_coordinator(unified_coordinator)
+# Override dependency functions in API modules with our coordinator instance
+agents.get_coordinator = get_coordinator
+tasks.get_coordinator = get_coordinator  
+distributed_workflows.get_coordinator = get_coordinator
+cli_agents.get_coordinator = get_coordinator
 
 # Socket.IO server setup
 sio = socketio.AsyncServer(

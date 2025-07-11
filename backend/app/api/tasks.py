@@ -1,62 +1,53 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Dict, Any, Optional
-from ..core.auth import get_current_user
-from ..core.unified_coordinator import UnifiedCoordinator, AgentType, TaskStatus
+from ..core.auth_deps import get_current_user_context
+from ..core.unified_coordinator_refactored import UnifiedCoordinatorRefactored as UnifiedCoordinator
 
 router = APIRouter()
 
-# This will be injected by main.py
-coordinator: UnifiedCoordinator = None
-
-def set_coordinator(coord: UnifiedCoordinator):
-    global coordinator
-    coordinator = coord
+# Dependency function for coordinator injection (will be overridden by main.py)
+def get_coordinator() -> UnifiedCoordinator:
+    """This will be overridden by main.py dependency injection"""
+    pass
 
 @router.post("/tasks")
-async def create_task(task_data: Dict[str, Any]):
+async def create_task(
+    task_data: Dict[str, Any], 
+    coordinator: UnifiedCoordinator = Depends(get_coordinator),
+    current_user: Dict[str, Any] = Depends(get_current_user_context)
+):
     """Create a new development task"""
     try:
-        # Map string type to AgentType enum
-        task_type_str = task_data.get("type")
-        if task_type_str not in [t.value for t in AgentType]:
-            raise HTTPException(status_code=400, detail=f"Invalid task type: {task_type_str}")
-        
-        task_type = AgentType(task_type_str)
-        priority = task_data.get("priority", 3)
+        # Extract task details
+        task_type_str = task_data.get("type", "python")
+        priority = task_data.get("priority", 5)
         context = task_data.get("context", {})
         
         # Create task using coordinator
-        task = coordinator.create_task(task_type, context, priority)
+        task_id = await coordinator.submit_task(task_data)
         
         return {
-            "id": task.id,
-            "type": task.type.value,
-            "priority": task.priority,
-            "status": task.status.value,
-            "context": task.context,
-            "created_at": task.created_at,
+            "id": task_id,
+            "type": task_type_str,
+            "priority": priority,
+            "status": "pending",
+            "context": context,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/tasks/{task_id}")
-async def get_task(task_id: str, current_user: dict = Depends(get_current_user)):
+async def get_task(
+    task_id: str, 
+    coordinator: UnifiedCoordinator = Depends(get_coordinator),
+    current_user: Dict[str, Any] = Depends(get_current_user_context)
+):
     """Get details of a specific task"""
-    task = coordinator.get_task_status(task_id)
+    task = await coordinator.get_task_status(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    return {
-        "id": task.id,
-        "type": task.type.value,
-        "priority": task.priority,
-        "status": task.status.value,
-        "context": task.context,
-        "assigned_agent": task.assigned_agent,
-        "result": task.result,
-        "created_at": task.created_at,
-        "completed_at": task.completed_at,
-    }
+    return task
 
 @router.get("/tasks")
 async def get_tasks(
@@ -64,7 +55,8 @@ async def get_tasks(
     agent: Optional[str] = Query(None, description="Filter by assigned agent"),
     workflow_id: Optional[str] = Query(None, description="Filter by workflow ID"),
     limit: int = Query(50, description="Maximum number of tasks to return"),
-    current_user: dict = Depends(get_current_user)
+    coordinator: UnifiedCoordinator = Depends(get_coordinator),
+    current_user: Dict[str, Any] = Depends(get_current_user_context)
 ):
     """Get list of tasks with optional filtering (includes database tasks)"""
     
@@ -157,7 +149,10 @@ async def get_tasks(
         }
 
 @router.get("/tasks/statistics")
-async def get_task_statistics(current_user: dict = Depends(get_current_user)):
+async def get_task_statistics(
+    coordinator: UnifiedCoordinator = Depends(get_coordinator),
+    current_user: Dict[str, Any] = Depends(get_current_user_context)
+):
     """Get comprehensive task statistics"""
     try:
         db_stats = coordinator.task_service.get_task_statistics()
@@ -179,11 +174,20 @@ async def get_task_statistics(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Failed to get task statistics: {str(e)}")
 
 @router.delete("/tasks/{task_id}")
-async def delete_task(task_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_task(
+    task_id: str, 
+    coordinator: UnifiedCoordinator = Depends(get_coordinator),
+    current_user: Dict[str, Any] = Depends(get_current_user_context)
+):
     """Delete a specific task"""
     try:
-        # Remove from in-memory cache if present
-        if task_id in coordinator.tasks:
+        # Remove from database
+        success = coordinator.task_service.delete_task(task_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        # Remove from in-memory cache if present  
+        if hasattr(coordinator, 'tasks') and task_id in coordinator.tasks:
             del coordinator.tasks[task_id]
             
         # Remove from task queue if present

@@ -1,7 +1,7 @@
 services:
   # Hive Backend API
   hive-backend:
-    image: anthonyrawlins/hive-backend:auth-system-final
+    image: anthonyrawlins/hive-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -54,7 +54,7 @@ services:
 
   # Hive Frontend
   hive-frontend:
-    image: anthonyrawlins/hive-frontend:auth-system
+    image: anthonyrawlins/hive-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile

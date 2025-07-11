@@ -33,6 +33,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  register: (userData: { email: string; password: string; full_name: string; username: string }) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<boolean>;
   updateUser: (userData: Partial<User>) => void;
@@ -173,6 +174,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const register = async (userData: { email: string; password: string; full_name: string; username: string }): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Registration failed');
+      }
+
+      const data = await response.json();
+      const newTokens: AuthTokens = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        token_type: data.token_type,
+        expires_in: 3600,
+      };
+
+      setTokens(newTokens);
+      setUser(data.user);
+
+      // Store in localStorage
+      localStorage.setItem('hive_tokens', JSON.stringify(newTokens));
+      localStorage.setItem('hive_user', JSON.stringify(data.user));
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
+  };
+
   const logout = async (): Promise<void> => {
     try {
       // Call logout endpoint if we have a token
@@ -220,6 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated,
     isLoading,
     login,
+    register,
     logout,
     refreshToken,
     updateUser,
