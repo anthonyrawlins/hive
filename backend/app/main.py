@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Hive API",
     description="Unified Distributed AI Orchestration Platform",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan
 )
 
