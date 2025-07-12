@@ -14,9 +14,16 @@ Key Features:
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from typing import List, Dict, Any, Optional
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 from ..core.auth_deps import get_current_user_context
 from ..core.unified_coordinator_refactored import UnifiedCoordinatorRefactored as UnifiedCoordinator
+from ..services.agent_service import AgentType
 from ..models.responses import (
     TaskListResponse,
     TaskCreationResponse,
@@ -110,27 +117,54 @@ async def create_task(
         raise coordinator_unavailable_error()
     
     try:
-        # Convert Pydantic model to dict for coordinator
-        task_dict = {
-            "type": task_data.type,
-            "priority": task_data.priority,
-            "context": task_data.context,
-            "preferred_agent": task_data.preferred_agent,
-            "timeout": task_data.timeout,
-            "user_id": current_user.get("user_id", "unknown")
-        }
+        # Convert task type string to AgentType enum
+        try:
+            agent_type = AgentType(task_data.type)
+        except ValueError:
+            raise validation_error("type", f"Invalid task type: {task_data.type}")
         
         # Create task using coordinator
-        task_id = await coordinator.submit_task(task_dict)
+        try:
+            task = coordinator.create_task(
+                task_type=agent_type,
+                context=task_data.context,
+                priority=task_data.priority
+            )
+            logger.info(f"Task created successfully: {task.id}")
+        except Exception as create_err:
+            logger.error(f"Task creation failed: {create_err}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Task creation failed: {str(create_err)}"
+            )
         
-        # Get task details for response
-        task_details = await coordinator.get_task_status(task_id)
-        
-        return TaskCreationResponse(
-            task_id=task_id,
-            assigned_agent=task_details.get("assigned_agent") if task_details else task_data.preferred_agent,
-            message=f"Task '{task_id}' created successfully with priority {task_data.priority}"
-        )
+        # Create simple dictionary response to avoid Pydantic datetime issues
+        try:
+            response_dict = {
+                "status": "success",
+                "timestamp": datetime.utcnow().isoformat(),
+                "task_id": str(task.id),
+                "assigned_agent": str(task.assigned_agent) if task.assigned_agent else None,
+                "message": f"Task '{task.id}' created successfully with priority {task_data.priority}"
+            }
+            
+            return JSONResponse(
+                status_code=201,
+                content=response_dict
+            )
+        except Exception as response_err:
+            logger.error(f"Response creation failed: {response_err}")
+            # Return minimal safe response
+            return JSONResponse(
+                status_code=201,
+                content={
+                    "status": "success",
+                    "task_id": str(task.id) if hasattr(task, 'id') else "unknown",
+                    "message": "Task created successfully"
+                }
+            )
         
     except ValueError as e:
         raise validation_error("task_data", str(e))
@@ -200,23 +234,23 @@ async def get_task(
         raise coordinator_unavailable_error()
     
     try:
-        task = await coordinator.get_task_status(task_id)
+        task = coordinator.get_task_status(task_id)
         if not task:
             raise task_not_found_error(task_id)
         
         # Convert coordinator task to response model
         return TaskModel(
-            id=task.get("id", task_id),
-            type=task.get("type", "unknown"),
-            priority=task.get("priority", 3),
-            status=task.get("status", "unknown"),
-            context=task.get("context", {}),
-            assigned_agent=task.get("assigned_agent"),
-            result=task.get("result"),
-            created_at=task.get("created_at"),
-            started_at=task.get("started_at"),
-            completed_at=task.get("completed_at"),
-            error_message=task.get("error_message")
+            id=task.id,
+            type=task.type.value if hasattr(task.type, 'value') else str(task.type),
+            priority=task.priority,
+            status=task.status.value if hasattr(task.status, 'value') else str(task.status),
+            context=task.context or {},
+            assigned_agent=task.assigned_agent,
+            result=task.result,
+            created_at=task.created_at,
+            started_at=getattr(task, 'started_at', None),
+            completed_at=task.completed_at,
+            error_message=getattr(task, 'error_message', None)
         )
         
     except HTTPException:

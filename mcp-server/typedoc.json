@@ -1,0 +1,55 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "name": "Hive MCP Server Documentation",
+  "theme": "default",
+  "readme": "README.md",
+  "includeVersion": true,
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Server Core",
+    "Client API",
+    "Tools",
+    "Resources", 
+    "Types",
+    "Utilities",
+    "*"
+  ],
+  "sort": ["source-order"],
+  "excludePrivate": false,
+  "excludeProtected": false,
+  "excludeInternal": false,
+  "gitRevision": "main",
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "cleanOutputDir": true,
+  "titleLink": "https://docs.hive.deepblack.cloud/mcp-server/",
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "plugin": [
+    "typedoc-plugin-markdown"
+  ],
+  "markdownPlugin": {
+    "entryFileName": "README.md"
+  },
+  "treatWarningsAsErrors": false,
+  "treatValidationWarningsAsErrors": false,
+  "validation": {
+    "notExported": false,
+    "invalidLink": false,
+    "notDocumented": false
+  },
+  "exclude": [
+    "node_modules/**/*",
+    "dist/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "externalPattern": ["node_modules/**/*"],
+  "excludeExternals": true
+}

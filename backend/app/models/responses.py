@@ -48,6 +48,11 @@ class BaseResponse(BaseModel):
     status: StatusEnum = Field(..., description="Response status indicator")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
     message: Optional[str] = Field(None, description="Human-readable message")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
 
 
 class ErrorResponse(BaseResponse):
@@ -173,12 +178,15 @@ class TaskModel(BaseModel):
     context: Dict[str, Any] = Field(..., description="Task context and parameters")
     assigned_agent: Optional[str] = Field(None, description="ID of assigned agent", example="walnut-codellama")
     result: Optional[Dict[str, Any]] = Field(None, description="Task execution results")
-    created_at: datetime = Field(..., description="Task creation timestamp")
+    created_at: Optional[datetime] = Field(None, description="Task creation timestamp")
     started_at: Optional[datetime] = Field(None, description="Task start timestamp")
     completed_at: Optional[datetime] = Field(None, description="Task completion timestamp")
     error_message: Optional[str] = Field(None, description="Error message if task failed")
     
     class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
         schema_extra = {
             "example": {
                 "id": "task-12345",
@@ -228,7 +236,7 @@ class TaskCreationResponse(BaseResponse):
     status: StatusEnum = Field(StatusEnum.SUCCESS)
     task_id: str = Field(..., description="ID of the created task", example="task-12345")
     assigned_agent: Optional[str] = Field(None, description="ID of assigned agent", example="walnut-codellama")
-    estimated_completion: Optional[datetime] = Field(None, description="Estimated completion time")
+    estimated_completion: Optional[str] = Field(None, description="Estimated completion time (ISO format)")
     
     class Config:
         schema_extra = {

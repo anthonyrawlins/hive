@@ -1,10 +1,27 @@
 #!/usr/bin/env node
 
 /**
- * Hive MCP Server
+ * @fileoverview Hive MCP Server - Main Entry Point
  * 
- * Exposes the Hive Distributed AI Orchestration Platform via Model Context Protocol (MCP)
- * Allows AI assistants like Claude to directly orchestrate distributed development tasks
+ * The Hive MCP Server exposes the Hive Distributed AI Orchestration Platform 
+ * via the Model Context Protocol (MCP), enabling AI assistants like Claude 
+ * to directly orchestrate distributed development tasks across multiple agents.
+ * 
+ * @author Hive Development Team
+ * @version 1.0.0
+ * @since 1.0.0
+ * 
+ * @example
+ * ```bash
+ * # Start server in stdio mode (for Claude Desktop)
+ * npm start
+ * 
+ * # Start server in daemon mode with auto-discovery
+ * npm start -- --daemon
+ * 
+ * # Start with custom discovery interval (5 minutes)
+ * DISCOVERY_INTERVAL=300000 npm start -- --daemon
+ * ```
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -19,14 +36,47 @@ import { HiveClient } from './hive-client.js';
 import { HiveTools } from './hive-tools.js';
 import { HiveResources } from './hive-resources.js';
 
+/**
+ * **Hive MCP Server**
+ * 
+ * Main server class that orchestrates the Model Context Protocol interface 
+ * for the Hive Distributed AI Platform. Provides tools and resources for 
+ * AI assistants to manage distributed development workflows.
+ * 
+ * @category Server Core
+ * @since 1.0.0
+ */
 class HiveMCPServer {
+  /** The MCP server instance handling protocol communication */
   private server: Server;
+  
+  /** Client for communicating with the Hive backend API */
   private hiveClient: HiveClient;
+  
+  /** Handler for MCP tools (agent operations, task management, etc.) */
   private hiveTools: HiveTools;
+  
+  /** Handler for MCP resources (cluster state, agent status, etc.) */
   private hiveResources: HiveResources;
+  
+  /** Timer for periodic agent auto-discovery (daemon mode only) */
   private discoveryInterval?: NodeJS.Timeout;
+  
+  /** Whether server is running in daemon mode with auto-discovery */
   private isDaemonMode: boolean = false;
 
+  /**
+   * Creates a new Hive MCP Server instance
+   * 
+   * Initializes the MCP server with tools and resources capabilities,
+   * sets up the Hive client connection, and configures request handlers.
+   * 
+   * @example
+   * ```typescript
+   * const server = new HiveMCPServer();
+   * await server.start();
+   * ```
+   */
   constructor() {
     this.server = new Server(
       {
@@ -49,6 +99,16 @@ class HiveMCPServer {
     this.setupHandlers();
   }
 
+  /**
+   * Sets up MCP request handlers and system signal handlers
+   * 
+   * Configures the server to handle:
+   * - Tool requests (list/execute Hive operations)
+   * - Resource requests (read cluster state)
+   * - System signals (graceful shutdown, agent discovery)
+   * 
+   * @private
+   */
   private setupHandlers() {
     // Tools handler - exposes Hive operations as MCP tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -93,6 +153,29 @@ class HiveMCPServer {
     });
   }
 
+  /**
+   * Starts the Hive MCP Server
+   * 
+   * Performs startup sequence:
+   * 1. Tests connection to Hive backend
+   * 2. Auto-discovers and registers agents
+   * 3. Sets up periodic discovery (daemon mode)
+   * 4. Starts MCP server on stdio or daemon mode
+   * 
+   * @throws {Error} If connection to Hive backend fails
+   * 
+   * @example
+   * ```typescript
+   * const server = new HiveMCPServer();
+   * await server.start(); // Starts in stdio mode
+   * ```
+   * 
+   * @example
+   * ```bash
+   * # Start in daemon mode with auto-discovery
+   * node dist/index.js --daemon
+   * ```
+   */
   async start() {
     console.log('🐝 Starting Hive MCP Server...');
     

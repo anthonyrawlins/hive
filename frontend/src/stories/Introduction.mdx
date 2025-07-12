@@ -1,0 +1,195 @@
+import { Meta } from '@storybook/blocks';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+
+<Meta title="Introduction/Welcome" />
+
+# Hive UI Component Library
+
+Welcome to the **Hive UI Component Library** documentation! This Storybook contains all the reusable components used throughout the Hive Distributed AI Orchestration Platform.
+
+## About Hive
+
+Hive is a sophisticated distributed AI orchestration platform that enables seamless coordination of multiple AI agents across different machines and services. The platform provides:
+
+- **Agent Management**: Register and manage AI agents across your cluster
+- **Task Orchestration**: Intelligent task distribution and execution
+- **Workflow Automation**: Multi-step workflow creation and management
+- **Real-time Monitoring**: Live dashboards and performance metrics
+- **CLI Integration**: Support for cloud-based AI services through CLI agents
+
+## Component Library Features
+
+This component library provides:
+
+### 🎨 **Consistent Design System**
+- Unified color palette and typography
+- Responsive design patterns
+- Accessibility-first approach
+- Dark/light theme support
+
+### 🧩 **Modular Components**
+- Reusable UI building blocks
+- Composable component patterns
+- TypeScript support throughout
+- Comprehensive prop interfaces
+
+### 📊 **Data Visualization**
+- Advanced data tables with sorting and filtering
+- Interactive charts and metrics
+- Real-time status indicators
+- Progress tracking components
+
+### 🔧 **Developer Experience**
+- Interactive component playground
+- Comprehensive documentation
+- Code examples and best practices
+- Accessibility guidelines
+
+## Quick Start
+
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Start Storybook
+npm run storybook
+```
+
+### Basic Usage
+
+```tsx
+import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
+
+function AgentCard({ agent }) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>{agent.name}</CardTitle>
+          <Badge variant="success">Available</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p>Model: {agent.model}</p>
+        <Button onClick={() => assignTask(agent)}>
+          Assign Task
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Component Categories
+
+### 🔘 **Base Components**
+- **Button**: Action triggers with multiple variants
+- **Input**: Form input elements with validation
+- **Badge**: Status indicators and labels
+- **Card**: Content containers with flexible layouts
+
+### 📋 **Data Components**
+- **DataTable**: Advanced tables with sorting, filtering, and pagination
+- **Form Elements**: Inputs, selects, checkboxes, and textareas
+- **Progress**: Progress bars and loading indicators
+
+### 🖼️ **Layout Components**
+- **Container**: Page and section layouts
+- **Grid**: Responsive grid systems
+- **Navigation**: Header, sidebar, and breadcrumb components
+
+### 📈 **Dashboard Components**
+- **Metrics Cards**: System performance indicators
+- **Agent Status**: Real-time agent monitoring
+- **Task Queue**: Task management interfaces
+- **Workflow Builder**: Visual workflow creation tools
+
+## Design Principles
+
+### ⚡ **Performance**
+- Optimized for fast rendering
+- Minimal bundle size impact
+- Efficient re-rendering patterns
+
+### ♿ **Accessibility**
+- WCAG 2.1 AA compliance
+- Keyboard navigation support
+- Screen reader compatibility
+- Focus management
+
+### 📱 **Responsive**
+- Mobile-first design approach
+- Flexible layouts for all screen sizes
+- Touch-friendly interactions
+
+### 🎯 **Usability**
+- Intuitive interaction patterns
+- Clear visual hierarchy
+- Contextual help and feedback
+
+## Getting Help
+
+### 📖 **Documentation**
+Each component includes:
+- Comprehensive API documentation
+- Interactive examples
+- Usage guidelines
+- Accessibility notes
+
+### 🔧 **Development**
+- Component source code links
+- TypeScript definitions
+- Testing examples
+- Performance notes
+
+### 🚀 **Contributing**
+To contribute to the component library:
+1. Follow the existing component patterns
+2. Include comprehensive documentation
+3. Add interactive stories
+4. Ensure accessibility compliance
+
+## Color Palette
+
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '24px' }}>
+  <div style={{ padding: '16px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '8px' }}>
+    <strong>Primary Blue</strong><br />
+    #3b82f6
+  </div>
+  <div style={{ padding: '16px', backgroundColor: '#10b981', color: 'white', borderRadius: '8px' }}>
+    <strong>Success Green</strong><br />
+    #10b981
+  </div>
+  <div style={{ padding: '16px', backgroundColor: '#f59e0b', color: 'white', borderRadius: '8px' }}>
+    <strong>Warning Yellow</strong><br />
+    #f59e0b
+  </div>
+  <div style={{ padding: '16px', backgroundColor: '#ef4444', color: 'white', borderRadius: '8px' }}>
+    <strong>Error Red</strong><br />
+    #ef4444
+  </div>
+  <div style={{ padding: '16px', backgroundColor: '#6b7280', color: 'white', borderRadius: '8px' }}>
+    <strong>Gray</strong><br />
+    #6b7280
+  </div>
+</div>
+
+## Component Examples
+
+Here's a quick preview of some key components:
+
+<div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '24px' }}>
+  <Button variant="default">Primary Action</Button>
+  <Button variant="outline">Secondary Action</Button>
+  <Badge variant="success">Available</Badge>
+  <Badge variant="warning">Busy</Badge>
+  <Badge variant="destructive">Offline</Badge>
+</div>
+
+---
+
+Ready to explore? Start with the **UI Components** section in the sidebar to see all available components and their usage examples.

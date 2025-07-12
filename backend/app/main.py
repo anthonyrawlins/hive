@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.encoders import jsonable_encoder
 from contextlib import asynccontextmanager
 import json
 import asyncio
@@ -49,6 +50,9 @@ async def lifespan(app: FastAPI):
         print("🤖 Initializing Unified Coordinator...")
         await unified_coordinator.start()
         
+        # Store coordinator in app state for endpoint access
+        app.state.hive_coordinator = unified_coordinator
+        app.state.unified_coordinator = unified_coordinator
         
         startup_success = True
         print("✅ Hive Orchestrator with Unified Coordinator started successfully!")
@@ -517,10 +521,7 @@ async def root():
         "timestamp": datetime.now().isoformat()
     }
 
-@app.get("/health")
-async def health_check_internal():
-    """Internal health check endpoint for Docker and monitoring"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+# Removed duplicate /health endpoint - using the enhanced one above
 
 @app.get("/api/health")
 async def health_check():

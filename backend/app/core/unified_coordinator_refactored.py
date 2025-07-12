@@ -151,7 +151,21 @@ class UnifiedCoordinatorRefactored:
         
         # Persist to database
         try:
-            self.task_service.create_task(task)
+            # Convert Task object to dictionary for database storage
+            task_dict = {
+                'id': task.id,
+                'title': f"Task {task.type.value}",
+                'description': f"Priority {task.priority} task",
+                'priority': task.priority,
+                'status': task.status.value,
+                'assigned_agent': task.assigned_agent,
+                'context': task.context,
+                'payload': task.payload,
+                'type': task.type.value,
+                'created_at': task.created_at,
+                'completed_at': task.completed_at
+            }
+            self.task_service.create_task(task_dict)
             logger.info(f"💾 Task {task_id} persisted to database")
         except Exception as e:
             logger.error(f"❌ Failed to persist task {task_id} to database: {e}")
