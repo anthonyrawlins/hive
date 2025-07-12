@@ -305,7 +305,311 @@ class HealthResponse(BaseModel):
         }
 
 
+# Workflow Response Models
+class WorkflowModel(BaseModel):
+    """Workflow information model"""
+    id: str = Field(..., description="Unique workflow identifier", example="workflow-12345")
+    name: str = Field(..., description="Human-readable workflow name", example="Code Review Pipeline")
+    description: Optional[str] = Field(None, description="Workflow description and purpose")
+    status: StatusEnum = Field(..., description="Current workflow status")
+    steps: List[Dict[str, Any]] = Field(..., description="Workflow steps and configuration")
+    created_at: datetime = Field(..., description="Workflow creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last modification timestamp")
+    created_by: Optional[str] = Field(None, description="User who created the workflow")
+    execution_count: int = Field(default=0, description="Number of times workflow has been executed", ge=0)
+    success_rate: float = Field(default=0.0, description="Workflow success rate percentage", ge=0.0, le=100.0)
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "workflow-12345",
+                "name": "Code Review Pipeline",
+                "description": "Automated code review and testing workflow",
+                "status": "active",
+                "steps": [
+                    {"type": "code_analysis", "agent": "walnut-codellama"},
+                    {"type": "testing", "agent": "oak-gemma"}
+                ],
+                "created_at": "2024-01-01T12:00:00Z",
+                "created_by": "user123",
+                "execution_count": 25,
+                "success_rate": 92.5
+            }
+        }
+
+
+class WorkflowListResponse(BaseResponse):
+    """Response model for listing workflows"""
+    status: StatusEnum = Field(StatusEnum.SUCCESS)
+    workflows: List[WorkflowModel] = Field(..., description="List of workflows")
+    total: int = Field(..., description="Total number of workflows", example=5, ge=0)
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "success",
+                "timestamp": "2024-01-01T12:00:00Z",
+                "workflows": [
+                    {
+                        "id": "workflow-12345",
+                        "name": "Code Review Pipeline",
+                        "status": "active",
+                        "execution_count": 25,
+                        "success_rate": 92.5
+                    }
+                ],
+                "total": 1
+            }
+        }
+
+
+class WorkflowCreationResponse(BaseResponse):
+    """Response model for workflow creation"""
+    status: StatusEnum = Field(StatusEnum.SUCCESS)
+    workflow_id: str = Field(..., description="ID of the created workflow", example="workflow-12345")
+    validation_results: Optional[Dict[str, Any]] = Field(None, description="Workflow validation results")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "success",
+                "timestamp": "2024-01-01T12:00:00Z",
+                "message": "Workflow created successfully",
+                "workflow_id": "workflow-12345",
+                "validation_results": {"valid": True, "warnings": []}
+            }
+        }
+
+
+class WorkflowExecutionResponse(BaseResponse):
+    """Response model for workflow execution"""
+    status: StatusEnum = Field(StatusEnum.SUCCESS)
+    execution_id: str = Field(..., description="ID of the workflow execution", example="exec-67890")
+    workflow_id: str = Field(..., description="ID of the executed workflow", example="workflow-12345")
+    estimated_duration: Optional[int] = Field(None, description="Estimated execution time in seconds", example=300)
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "success",
+                "timestamp": "2024-01-01T12:00:00Z",
+                "message": "Workflow execution started successfully",
+                "execution_id": "exec-67890",
+                "workflow_id": "workflow-12345",
+                "estimated_duration": 300
+            }
+        }
+
+
+# CLI Agent Response Models
+class CliAgentModel(BaseModel):
+    """CLI Agent information model"""
+    id: str = Field(..., description="Unique CLI agent identifier", example="walnut-gemini")
+    endpoint: str = Field(..., description="CLI agent endpoint", example="cli://walnut")
+    model: str = Field(..., description="AI model name", example="gemini-2.5-pro")
+    specialization: str = Field(..., description="Agent specialization", example="general_ai")
+    agent_type: str = Field(..., description="CLI agent type", example="gemini")
+    status: AgentStatusEnum = Field(default=AgentStatusEnum.AVAILABLE, description="Current agent status")
+    max_concurrent: int = Field(..., description="Maximum concurrent tasks", example=2, ge=1, le=10)
+    current_tasks: int = Field(default=0, description="Currently running tasks", example=0, ge=0)
+    cli_config: Dict[str, Any] = Field(..., description="CLI-specific configuration")
+    last_health_check: Optional[datetime] = Field(None, description="Last health check timestamp")
+    performance_metrics: Optional[Dict[str, Any]] = Field(None, description="Performance metrics and statistics")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "walnut-gemini",
+                "endpoint": "cli://walnut",
+                "model": "gemini-2.5-pro",
+                "specialization": "general_ai",
+                "agent_type": "gemini",
+                "status": "available",
+                "max_concurrent": 2,
+                "current_tasks": 0,
+                "cli_config": {
+                    "host": "walnut",
+                    "node_version": "v20.11.0",
+                    "command_timeout": 60,
+                    "ssh_timeout": 5
+                },
+                "last_health_check": "2024-01-01T12:00:00Z",
+                "performance_metrics": {
+                    "avg_response_time": 2.5,
+                    "success_rate": 98.2,
+                    "total_requests": 150
+                }
+            }
+        }
+
+
+class CliAgentListResponse(BaseResponse):
+    """Response model for listing CLI agents"""
+    status: StatusEnum = Field(StatusEnum.SUCCESS)
+    agents: List[CliAgentModel] = Field(..., description="List of CLI agents")
+    total: int = Field(..., description="Total number of CLI agents", example=2, ge=0)
+    agent_types: List[str] = Field(..., description="Available CLI agent types", example=["gemini"])
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "success",
+                "timestamp": "2024-01-01T12:00:00Z",
+                "agents": [
+                    {
+                        "id": "walnut-gemini",
+                        "endpoint": "cli://walnut",
+                        "model": "gemini-2.5-pro",
+                        "specialization": "general_ai",
+                        "agent_type": "gemini",
+                        "status": "available",
+                        "max_concurrent": 2,
+                        "current_tasks": 0
+                    }
+                ],
+                "total": 1,
+                "agent_types": ["gemini"]
+            }
+        }
+
+
+class CliAgentRegistrationResponse(BaseResponse):
+    """Response model for CLI agent registration"""
+    status: StatusEnum = Field(StatusEnum.SUCCESS)
+    agent_id: str = Field(..., description="ID of the registered CLI agent", example="walnut-gemini")
+    endpoint: str = Field(..., description="CLI agent endpoint", example="cli://walnut")
+    health_check: Dict[str, Any] = Field(..., description="Initial health check results")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "success",
+                "timestamp": "2024-01-01T12:00:00Z",
+                "message": "CLI agent registered successfully",
+                "agent_id": "walnut-gemini",
+                "endpoint": "cli://walnut",
+                "health_check": {
+                    "cli_healthy": True,
+                    "response_time": 1.2,
+                    "node_version": "v20.11.0"
+                }
+            }
+        }
+
+
+class CliAgentHealthResponse(BaseResponse):
+    """Response model for CLI agent health check"""
+    status: StatusEnum = Field(StatusEnum.SUCCESS)
+    agent_id: str = Field(..., description="CLI agent identifier", example="walnut-gemini")
+    health_status: Dict[str, Any] = Field(..., description="Detailed health check results")
+    performance_metrics: Dict[str, Any] = Field(..., description="Performance metrics")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "success",
+                "timestamp": "2024-01-01T12:00:00Z",
+                "agent_id": "walnut-gemini",
+                "health_status": {
+                    "cli_healthy": True,
+                    "connectivity": "excellent",
+                    "response_time": 1.2,
+                    "node_version": "v20.11.0",
+                    "memory_usage": "245MB",
+                    "cpu_usage": "12%"
+                },
+                "performance_metrics": {
+                    "avg_response_time": 2.1,
+                    "requests_per_hour": 45,
+                    "success_rate": 98.7,
+                    "error_rate": 1.3
+                }
+            }
+        }
+
+
 # Request Models
+class CliAgentRegistrationRequest(BaseModel):
+    """Request model for CLI agent registration"""
+    id: str = Field(..., description="Unique CLI agent identifier", example="walnut-gemini", min_length=1, max_length=100)
+    host: str = Field(..., description="Host machine name or IP", example="walnut", min_length=1)
+    node_version: str = Field(..., description="Node.js version", example="v20.11.0")
+    model: str = Field(default="gemini-2.5-pro", description="AI model name", example="gemini-2.5-pro")
+    specialization: str = Field(default="general_ai", description="Agent specialization", example="general_ai")
+    max_concurrent: int = Field(default=2, description="Maximum concurrent tasks", example=2, ge=1, le=10)
+    agent_type: str = Field(default="gemini", description="CLI agent type", example="gemini")
+    command_timeout: int = Field(default=60, description="Command timeout in seconds", example=60, ge=1, le=3600)
+    ssh_timeout: int = Field(default=5, description="SSH connection timeout in seconds", example=5, ge=1, le=60)
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "walnut-gemini",
+                "host": "walnut",
+                "node_version": "v20.11.0",
+                "model": "gemini-2.5-pro",
+                "specialization": "general_ai",
+                "max_concurrent": 2,
+                "agent_type": "gemini",
+                "command_timeout": 60,
+                "ssh_timeout": 5
+            }
+        }
+
+
+class WorkflowCreationRequest(BaseModel):
+    """Request model for workflow creation"""
+    name: str = Field(..., description="Human-readable workflow name", example="Code Review Pipeline", min_length=1, max_length=200)
+    description: Optional[str] = Field(None, description="Workflow description and purpose", max_length=1000)
+    steps: List[Dict[str, Any]] = Field(..., description="Workflow steps and configuration", min_items=1)
+    variables: Optional[Dict[str, Any]] = Field(None, description="Workflow variables and configuration")
+    timeout: Optional[int] = Field(None, description="Maximum execution time in seconds", example=3600, ge=1)
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Code Review Pipeline",
+                "description": "Automated code review and testing workflow",
+                "steps": [
+                    {
+                        "name": "Code Analysis",
+                        "type": "code_analysis",
+                        "agent_specialty": "kernel_dev",
+                        "context": {"files": ["src/*.py"], "rules": "security"}
+                    },
+                    {
+                        "name": "Unit Testing", 
+                        "type": "testing",
+                        "agent_specialty": "tester",
+                        "context": {"test_suite": "unit", "coverage": 80}
+                    }
+                ],
+                "variables": {"project_path": "/src", "environment": "staging"},
+                "timeout": 3600
+            }
+        }
+
+
+class WorkflowExecutionRequest(BaseModel):
+    """Request model for workflow execution"""
+    inputs: Optional[Dict[str, Any]] = Field(None, description="Input parameters for workflow execution")
+    priority: int = Field(default=3, description="Execution priority level", example=1, ge=1, le=5)
+    timeout_override: Optional[int] = Field(None, description="Override default timeout in seconds", example=1800, ge=1)
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "inputs": {
+                    "repository_url": "https://github.com/user/repo",
+                    "branch": "feature/new-api",
+                    "commit_sha": "abc123def456"
+                },
+                "priority": 1,
+                "timeout_override": 1800
+            }
+        }
+
+
 class AgentRegistrationRequest(BaseModel):
     """Request model for agent registration"""
     id: str = Field(..., description="Unique agent identifier", example="walnut-codellama", min_length=1, max_length=100)
