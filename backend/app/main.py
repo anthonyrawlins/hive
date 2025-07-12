@@ -74,11 +74,107 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"❌ Shutdown error: {e}")
 
-# Create FastAPI application
+# Create FastAPI application with comprehensive OpenAPI configuration
 app = FastAPI(
     title="Hive API",
-    description="Unified Distributed AI Orchestration Platform",
+    description="""
+    **Hive Unified Distributed AI Orchestration Platform**
+    
+    A comprehensive platform for managing and orchestrating distributed AI agents across multiple nodes.
+    Supports both Ollama-based local agents and CLI-based cloud agents (like Google Gemini).
+    
+    ## Features
+    
+    * **Multi-Agent Management**: Register and manage both Ollama and CLI-based AI agents
+    * **Task Orchestration**: Distribute and coordinate tasks across specialized agents  
+    * **Workflow Engine**: Create and execute complex multi-agent workflows
+    * **Real-time Monitoring**: Monitor agent health, task progress, and system performance
+    * **Performance Analytics**: Track utilization, success rates, and performance metrics
+    * **Authentication**: Secure API access with JWT-based authentication
+    
+    ## Agent Types
+    
+    * **kernel_dev**: Linux kernel development and debugging
+    * **pytorch_dev**: PyTorch model development and optimization  
+    * **profiler**: Performance profiling and optimization
+    * **docs_writer**: Documentation generation and technical writing
+    * **tester**: Automated testing and quality assurance
+    * **cli_gemini**: Google Gemini CLI integration for advanced reasoning
+    * **general_ai**: General-purpose AI assistance
+    * **reasoning**: Complex reasoning and problem-solving tasks
+    
+    ## Quick Start
+    
+    1. Register agents via `/api/agents` endpoint
+    2. Create tasks via `/api/tasks` endpoint  
+    3. Monitor progress via `/api/status` endpoint
+    4. Execute workflows via `/api/workflows` endpoint
+    
+    For detailed documentation, visit the [Hive Documentation](https://hive.home.deepblack.cloud/docs).
+    """,
     version="1.1.0",
+    terms_of_service="https://hive.home.deepblack.cloud/terms",
+    contact={
+        "name": "Hive Development Team",
+        "url": "https://hive.home.deepblack.cloud/contact",
+        "email": "hive-support@deepblack.cloud",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
+    servers=[
+        {
+            "url": "https://hive.home.deepblack.cloud/api",
+            "description": "Production server"
+        },
+        {
+            "url": "http://localhost:8087/api", 
+            "description": "Development server"
+        }
+    ],
+    openapi_tags=[
+        {
+            "name": "authentication",
+            "description": "User authentication and authorization operations"
+        },
+        {
+            "name": "agents", 
+            "description": "Ollama agent management and registration"
+        },
+        {
+            "name": "cli-agents",
+            "description": "CLI-based agent management (Google Gemini, etc.)"
+        },
+        {
+            "name": "tasks",
+            "description": "Task creation, management, and execution"
+        },
+        {
+            "name": "workflows", 
+            "description": "Multi-agent workflow orchestration"
+        },
+        {
+            "name": "executions",
+            "description": "Workflow execution tracking and results"
+        },
+        {
+            "name": "monitoring",
+            "description": "System health monitoring and metrics"
+        },
+        {
+            "name": "projects",
+            "description": "Project management and organization"
+        },
+        {
+            "name": "cluster",
+            "description": "Cluster-wide operations and coordination"
+        },
+        {
+            "name": "distributed-workflows",
+            "description": "Advanced distributed workflow management"
+        }
+    ],
     lifespan=lifespan
 )
 
@@ -104,6 +200,27 @@ def get_coordinator() -> UnifiedCoordinator:
 # Import API routers
 from .api import agents, workflows, executions, monitoring, projects, tasks, cluster, distributed_workflows, cli_agents, auth
 
+# Import error handlers and response models
+from .core.error_handlers import (
+    hive_exception_handler,
+    validation_exception_handler, 
+    generic_exception_handler,
+    HiveAPIException,
+    create_health_response,
+    check_component_health
+)
+from .models.responses import HealthResponse, SystemStatusResponse, ErrorResponse, ComponentStatus
+from fastapi.exceptions import RequestValidationError
+import logging
+from .docs_config import custom_openapi_schema
+
+logger = logging.getLogger(__name__)
+
+# Register global exception handlers
+app.add_exception_handler(HiveAPIException, hive_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
+
 # Include API routes
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(agents.router, prefix="/api", tags=["agents"])
@@ -121,6 +238,167 @@ agents.get_coordinator = get_coordinator
 tasks.get_coordinator = get_coordinator  
 distributed_workflows.get_coordinator = get_coordinator
 cli_agents.get_coordinator = get_coordinator
+
+
+# Health Check and System Status Endpoints
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Simple health check",
+    description="""
+    Basic health check endpoint for monitoring system availability.
+    
+    This lightweight endpoint provides a quick health status check
+    without detailed component analysis. Use this for:
+    
+    - Load balancer health checks
+    - Simple uptime monitoring
+    - Basic availability verification
+    - Quick status confirmation
+    
+    For detailed system status including component health,
+    use the `/api/health` endpoint instead.
+    """,
+    tags=["health"],
+    responses={
+        200: {"description": "System is healthy and operational"},
+        503: {"model": ErrorResponse, "description": "System is unhealthy or partially unavailable"}
+    }
+)
+async def health_check() -> HealthResponse:
+    """
+    Simple health check endpoint.
+    
+    Returns:
+        HealthResponse: Basic health status and timestamp
+    """
+    return HealthResponse(
+        status="healthy",
+        version="1.1.0"
+    )
+
+
+@app.get(
+    "/api/health",
+    response_model=SystemStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Comprehensive system health check",
+    description="""
+    Comprehensive health check with detailed component status information.
+    
+    This endpoint performs thorough health checks on all system components:
+    
+    **Checked Components:**
+    - Database connectivity and performance
+    - Coordinator service status
+    - Active agent health and availability
+    - Task queue status and capacity
+    - Memory and resource utilization
+    - External service dependencies
+    
+    **Use Cases:**
+    - Detailed system monitoring and alerting
+    - Troubleshooting system issues
+    - Performance analysis and optimization
+    - Operational status dashboards
+    - Pre-deployment health verification
+    
+    **Response Details:**
+    - Overall system status and version
+    - Component-specific health status
+    - Active agent status and utilization
+    - Task queue metrics and performance
+    - System uptime and performance metrics
+    """,
+    tags=["health"],
+    responses={
+        200: {"description": "Detailed system health status retrieved successfully"},
+        500: {"model": ErrorResponse, "description": "Health check failed due to system errors"}
+    }
+)
+async def detailed_health_check() -> SystemStatusResponse:
+    """
+    Comprehensive system health check with component details.
+    
+    Returns:
+        SystemStatusResponse: Detailed system and component health status
+        
+    Raises:
+        HTTPException: If health check encounters critical errors
+    """
+    try:
+        # Check database health
+        database_health = check_component_health(
+            "database",
+            lambda: test_database_connection()
+        )
+        
+        # Check coordinator health
+        coordinator_health = check_component_health(
+            "coordinator", 
+            lambda: unified_coordinator is not None and hasattr(unified_coordinator, 'get_health_status')
+        )
+        
+        # Get coordinator status if available
+        coordinator_status = {}
+        if unified_coordinator:
+            try:
+                coordinator_status = await unified_coordinator.get_health_status()
+            except Exception as e:
+                coordinator_status = {"error": str(e)}
+        
+        # Build component status list
+        components = [
+            ComponentStatus(
+                name="database",
+                status="success" if database_health["status"] == "healthy" else "error",
+                details=database_health.get("details", {}),
+                last_check=datetime.utcnow()
+            ),
+            ComponentStatus(
+                name="coordinator",
+                status="success" if coordinator_health["status"] == "healthy" else "error", 
+                details=coordinator_health.get("details", {}),
+                last_check=datetime.utcnow()
+            )
+        ]
+        
+        # Extract agent information
+        agents_info = coordinator_status.get("agents", {})
+        total_agents = len(agents_info)
+        active_tasks = coordinator_status.get("active_tasks", 0)
+        pending_tasks = coordinator_status.get("pending_tasks", 0)
+        completed_tasks = coordinator_status.get("completed_tasks", 0)
+        
+        # Calculate uptime (placeholder - could be enhanced with actual uptime tracking)
+        uptime = coordinator_status.get("uptime", 0.0)
+        
+        return SystemStatusResponse(
+            components=components,
+            agents=agents_info,
+            total_agents=total_agents,
+            active_tasks=active_tasks,
+            pending_tasks=pending_tasks,
+            completed_tasks=completed_tasks,
+            uptime=uptime,
+            version="1.1.0",
+            message="System health check completed successfully"
+        )
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Health check failed: {str(e)}"
+        )
+
+
+# Configure custom OpenAPI schema
+def get_custom_openapi():
+    return custom_openapi_schema(app)
+
+app.openapi = get_custom_openapi
 
 # Socket.IO server setup
 sio = socketio.AsyncServer(

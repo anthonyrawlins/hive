@@ -99,18 +99,18 @@ export class HiveClient {
 
   // Agent Management
   async getAgents(): Promise<Agent[]> {
-    const response = await this.api.get('/api/agents');
+    const response = await this.api.get('/agents');
     return response.data.agents || [];
   }
 
   async registerAgent(agentData: Partial<Agent>): Promise<{ agent_id: string }> {
-    const response = await this.api.post('/api/agents', agentData);
+    const response = await this.api.post('/agents', agentData);
     return response.data;
   }
 
   // CLI Agent Management
   async getCliAgents(): Promise<Agent[]> {
-    const response = await this.api.get('/api/cli-agents/');
+    const response = await this.api.get('/cli-agents/');
     return response.data || [];
   }
 
@@ -125,27 +125,27 @@ export class HiveClient {
     command_timeout?: number;
     ssh_timeout?: number;
   }): Promise<{ agent_id: string; endpoint: string; health_check?: any }> {
-    const response = await this.api.post('/api/cli-agents/register', agentData);
+    const response = await this.api.post('/cli-agents/register', agentData);
     return response.data;
   }
 
   async registerPredefinedCliAgents(): Promise<{ results: any[] }> {
-    const response = await this.api.post('/api/cli-agents/register-predefined');
+    const response = await this.api.post('/cli-agents/register-predefined');
     return response.data;
   }
 
   async healthCheckCliAgent(agentId: string): Promise<any> {
-    const response = await this.api.post(`/api/cli-agents/${agentId}/health-check`);
+    const response = await this.api.post(`/cli-agents/${agentId}/health-check`);
     return response.data;
   }
 
   async getCliAgentStatistics(): Promise<any> {
-    const response = await this.api.get('/api/cli-agents/statistics/all');
+    const response = await this.api.get('/cli-agents/statistics/all');
     return response.data;
   }
 
   async unregisterCliAgent(agentId: string): Promise<{ success: boolean }> {
-    const response = await this.api.delete(`/api/cli-agents/${agentId}`);
+    const response = await this.api.delete(`/cli-agents/${agentId}`);
     return response.data;
   }
 
@@ -155,12 +155,12 @@ export class HiveClient {
     priority: number;
     context: Record<string, any>;
   }): Promise<Task> {
-    const response = await this.api.post('/api/tasks', taskData);
+    const response = await this.api.post('/tasks', taskData);
     return response.data;
   }
 
   async getTask(taskId: string): Promise<Task> {
-    const response = await this.api.get(`/api/tasks/${taskId}`);
+    const response = await this.api.get(`/tasks/${taskId}`);
     return response.data;
   }
 
@@ -174,39 +174,39 @@ export class HiveClient {
     if (filters?.agent) params.append('agent', filters.agent);
     if (filters?.limit) params.append('limit', filters.limit.toString());
 
-    const response = await this.api.get(`/api/tasks?${params}`);
+    const response = await this.api.get(`/tasks?${params}`);
     return response.data.tasks || [];
   }
 
   // Workflow Management
   async getWorkflows(): Promise<any[]> {
-    const response = await this.api.get('/api/workflows');
+    const response = await this.api.get('/workflows');
     return response.data.workflows || [];
   }
 
   async createWorkflow(workflowData: Record<string, any>): Promise<{ workflow_id: string }> {
-    const response = await this.api.post('/api/workflows', workflowData);
+    const response = await this.api.post('/workflows', workflowData);
     return response.data;
   }
 
   async executeWorkflow(workflowId: string, inputs?: Record<string, any>): Promise<{ execution_id: string }> {
-    const response = await this.api.post(`/api/workflows/${workflowId}/execute`, { inputs });
+    const response = await this.api.post(`/workflows/${workflowId}/execute`, { inputs });
     return response.data;
   }
 
   // Monitoring and Status
   async getClusterStatus(): Promise<ClusterStatus> {
-    const response = await this.api.get('/api/status');
+    const response = await this.api.get('/status');
     return response.data;
   }
 
   async getMetrics(): Promise<string> {
-    const response = await this.api.get('/api/metrics');
+    const response = await this.api.get('/metrics');
     return response.data;
   }
 
   async getExecutions(workflowId?: string): Promise<any[]> {
-    const url = workflowId ? `/api/executions?workflow_id=${workflowId}` : '/api/executions';
+    const url = workflowId ? `/executions?workflow_id=${workflowId}` : '/executions';
     const response = await this.api.get(url);
     return response.data.executions || [];
   }

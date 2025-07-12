@@ -77,17 +77,17 @@ export class WebSocketService {
   private reconnectDelay = 1000;
 
   constructor() {
-    this.connect();
+    // Don't auto-connect - let the app connect when authenticated
   }
 
-  private connect(): void {
+  private _connect(): void {
     const token = localStorage.getItem('token');
     if (!token) {
       console.warn('No auth token found for WebSocket connection');
       return;
     }
 
-    const baseURL = process.env.VITE_API_BASE_URL || 'http://localhost:8087';
+    const baseURL = process.env.REACT_APP_SOCKETIO_URL || 'https://hive.home.deepblack.cloud';
     
     this.socket = io(baseURL, {
       auth: {
@@ -193,11 +193,27 @@ export class WebSocketService {
     console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`);
     
     setTimeout(() => {
-      this.connect();
+      this._connect();
     }, delay);
   }
 
   // Public methods
+  public connect(): void {
+    if (this.socket?.connected) {
+      console.log('WebSocket already connected');
+      return;
+    }
+    this._connect();
+  }
+
+  public disconnect(): void {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+      this.reconnectAttempts = 0;
+    }
+  }
+
   public setEventHandlers(handlers: WebSocketEventHandlers): void {
     this.handlers = { ...this.handlers, ...handlers };
   }
@@ -218,10 +234,6 @@ export class WebSocketService {
     this.socket?.emit(event, data);
   }
 
-  public disconnect(): void {
-    this.socket?.disconnect();
-    this.socket = null;
-  }
 
   public isConnected(): boolean {
     return this.socket?.connected ?? false;
