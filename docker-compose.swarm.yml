@@ -32,9 +32,9 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-#      placement:
-#        constraints: 
-#          - node.hostname == walnut
+      placement:
+        constraints: 
+          - node.hostname == walnut
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=tengig"
@@ -80,7 +80,8 @@ services:
         reservations:
           memory: 128M
       placement:
-        constraints: []
+        constraints: 
+          - node.hostname == walnut
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=tengig"

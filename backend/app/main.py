@@ -528,46 +528,15 @@ async def root():
 
 # Removed duplicate /health endpoint - using the enhanced one above
 
-@app.get("/api/health")
+@app.get("/api/health", response_model=None)
 async def health_check():
-    """Enhanced health check endpoint with comprehensive status"""
-    health_status = {
+    """Simple health check endpoint"""
+    return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "version": "1.0.0",
-        "components": {
-            "api": "operational",
-            "database": "unknown",
-            "coordinator": "unknown",
-            "agents": {}
-        }
+        "message": "Hive API is operational"
     }
-    
-    # Test database connection
-    try:
-        if test_database_connection():
-            health_status["components"]["database"] = "operational"
-        else:
-            health_status["components"]["database"] = "unhealthy"
-            health_status["status"] = "degraded"
-    except Exception as e:
-        health_status["components"]["database"] = f"error: {str(e)}"
-        health_status["status"] = "degraded"
-    
-    # Test coordinator health
-    try:
-        coordinator_status = await unified_coordinator.get_health_status()
-        health_status["components"]["coordinator"] = coordinator_status.get("status", "unknown")
-        health_status["components"]["agents"] = coordinator_status.get("agents", {})
-    except Exception as e:
-        health_status["components"]["coordinator"] = f"error: {str(e)}"
-        health_status["status"] = "degraded"
-    
-    # Return appropriate status code
-    if health_status["status"] == "degraded":
-        raise HTTPException(status_code=503, detail=health_status)
-    
-    return health_status
 
 @app.get("/api/status")
 async def get_system_status():
