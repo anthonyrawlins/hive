@@ -41,10 +41,29 @@ api.interceptors.response.use(
 
 // Project API
 export const projectApi = {
-  // Get all projects
+  // Get all projects (from Bzzz active repos)
   getProjects: async (): Promise<Project[]> => {
-    const response = await api.get('/projects');
-    return response.data;
+    const response = await api.get('/api/bzzz/active-repos');
+    // Transform Bzzz repository objects to Project objects with status
+    if (response.data && response.data.repositories) {
+      return response.data.repositories.map((repo: any) => ({
+        id: repo.project_id,
+        name: repo.name,
+        description: `${repo.name} - ${repo.owner}/${repo.repository}`,
+        status: repo.ready_to_claim ? 'active' : 'inactive',
+        git_url: repo.git_url,
+        owner: repo.owner,
+        repository: repo.repository,
+        branch: repo.branch,
+        bzzz_enabled: repo.bzzz_enabled,
+        ready_to_claim: repo.ready_to_claim,
+        private_repo: repo.private_repo,
+        github_token_required: repo.github_token_required,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+    }
+    return [];
   },
 
   // Get a single project by ID

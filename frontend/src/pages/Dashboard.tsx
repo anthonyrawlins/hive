@@ -45,18 +45,15 @@ export default function Dashboard() {
     queryFn: () => clusterApi.getWorkflows()
   });
 
-  // Calculate stats from real data - ensure arrays exist
-  const projectsArray = Array.isArray(projects) ? projects : [];
-  const workflowsArray = Array.isArray(workflows) ? workflows : [];
-  
+  // Calculate stats from real data
   const stats = {
     projects: { 
-      total: projectsArray.length, 
-      active: projectsArray.filter(p => p.status === 'active').length 
+      total: projects.length, 
+      active: projects.filter(p => p.status === 'active').length 
     },
     workflows: { 
-      total: workflowsArray.length, 
-      active: workflowsArray.filter((w: any) => w.active).length 
+      total: workflows.length, 
+      active: workflows.filter((w: any) => w.active).length 
     },
     cluster: {
       total_nodes: clusterOverview?.total_nodes || 0,
