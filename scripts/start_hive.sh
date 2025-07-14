@@ -96,7 +96,7 @@ fi
 
 # Build Hive services
 log_info "Building Hive services..."
-if docker build -t anthonyrawlins/hive-backend:latest ./backend && docker build -t anthonyrawlins/hive-frontend:latest ./frontend; then
+if docker build -t registry.home.deepblack.cloud/tony/hive-backend:latest ./backend && docker build -t registry.home.deepblack.cloud/tony/hive-frontend:latest ./frontend; then
     log_success "Hive services built successfully"
 else
     log_error "Failed to build Hive services"

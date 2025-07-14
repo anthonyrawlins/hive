@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends, status
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from ..services.capability_detector import CapabilityDetector, detect_capabilities
-from ..core.unified_coordinator import Agent, AgentType
+# Agent model is imported as ORMAgent below
 from ..models.responses import (
     AgentListResponse, 
     AgentRegistrationResponse, 

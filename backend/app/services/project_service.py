@@ -19,9 +19,19 @@ class ProjectService:
         self.github_api_base = "https://api.github.com"
     
     def _get_github_token(self) -> Optional[str]:
-        """Get GitHub token from secrets file."""
+        """Get GitHub token from Docker secret or secrets file."""
         try:
-            # Try GitHub token first
+            # Try Docker secret first (more secure)
+            docker_secret_path = Path("/run/secrets/github_token")
+            if docker_secret_path.exists():
+                return docker_secret_path.read_text().strip()
+            
+            # Try gh-token from filesystem (fallback)
+            gh_token_path = Path("/home/tony/AI/secrets/passwords_and_tokens/gh-token")
+            if gh_token_path.exists():
+                return gh_token_path.read_text().strip()
+            
+            # Try GitHub token from filesystem
             github_token_path = Path("/home/tony/AI/secrets/passwords_and_tokens/github-token")
             if github_token_path.exists():
                 return github_token_path.read_text().strip()
@@ -30,8 +40,8 @@ class ProjectService:
             gitlab_token_path = Path("/home/tony/AI/secrets/passwords_and_tokens/claude-gitlab-token")
             if gitlab_token_path.exists():
                 return gitlab_token_path.read_text().strip()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error reading GitHub token: {e}")
         return None
     
     def get_all_projects(self) -> List[Dict[str, Any]]:
@@ -435,3 +445,248 @@ class ProjectService:
                 })
         
         return tasks
+    
+    # === Bzzz Integration Methods ===
+    
+    def get_bzzz_active_repositories(self) -> List[Dict[str, Any]]:
+        """Get list of repositories enabled for Bzzz consumption from database."""
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        
+        active_repos = []
+        
+        try:
+            print("DEBUG: Attempting to connect to database...")
+            # Connect to database
+            conn = psycopg2.connect(
+                host="192.168.1.27",
+                port=5433,
+                database="hive",
+                user="hive",
+                password="hivepass"
+            )
+            print("DEBUG: Database connection successful")
+            
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                # Query projects where bzzz_enabled is true
+                print("DEBUG: Executing query for bzzz-enabled projects...")
+                cursor.execute("""
+                    SELECT id, name, description, git_url, git_owner, git_repository, 
+                           git_branch, bzzz_enabled, ready_to_claim, private_repo, github_token_required
+                    FROM projects 
+                    WHERE bzzz_enabled = true AND git_url IS NOT NULL
+                """)
+                
+                db_projects = cursor.fetchall()
+                print(f"DEBUG: Found {len(db_projects)} bzzz-enabled projects in database")
+                
+                for project in db_projects:
+                    print(f"DEBUG: Processing project {project['name']} (ID: {project['id']})")
+                    # For each enabled project, check if it has bzzz-task issues
+                    project_id = project['id']
+                    github_repo = f"{project['git_owner']}/{project['git_repository']}"
+                    print(f"DEBUG: Checking GitHub repo: {github_repo}")
+                    
+                    # Check for bzzz-task issues
+                    bzzz_tasks = self._get_github_bzzz_tasks(github_repo)
+                    has_tasks = len(bzzz_tasks) > 0
+                    print(f"DEBUG: Found {len(bzzz_tasks)} bzzz-task issues, has_tasks={has_tasks}")
+                    
+                    active_repos.append({
+                        "project_id": project_id,
+                        "name": project['name'],
+                        "git_url": project['git_url'],
+                        "owner": project['git_owner'],
+                        "repository": project['git_repository'],
+                        "branch": project['git_branch'] or "main",
+                        "bzzz_enabled": project['bzzz_enabled'],
+                        "ready_to_claim": has_tasks,
+                        "private_repo": project['private_repo'],
+                        "github_token_required": project['github_token_required']
+                    })
+            
+            conn.close()
+            print(f"DEBUG: Returning {len(active_repos)} active repositories")
+            
+        except Exception as e:
+            print(f"Error fetching bzzz active repositories: {e}")
+            import traceback
+            print(f"DEBUG: Exception traceback: {traceback.format_exc()}")
+            # Fallback to filesystem method if database fails
+            return self._get_bzzz_active_repositories_filesystem()
+        
+        return active_repos
+    
+    def _get_github_bzzz_tasks(self, github_repo: str) -> List[Dict[str, Any]]:
+        """Fetch GitHub issues with bzzz-task label for a repository."""
+        if not self.github_token:
+            return []
+        
+        try:
+            url = f"{self.github_api_base}/repos/{github_repo}/issues"
+            headers = {
+                "Authorization": f"token {self.github_token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            params = {
+                "labels": "bzzz-task",
+                "state": "open"
+            }
+            
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error fetching bzzz-task issues for {github_repo}: {e}")
+        
+        return []
+    
+    def _get_bzzz_active_repositories_filesystem(self) -> List[Dict[str, Any]]:
+        """Fallback method using filesystem scan for bzzz repositories."""
+        active_repos = []
+        
+        # Get all projects and filter for those with GitHub repos
+        all_projects = self.get_all_projects()
+        
+        for project in all_projects:
+            github_repo = project.get('github_repo')
+            if not github_repo:
+                continue
+                
+            # Check if project has bzzz-task issues (indicating Bzzz readiness)
+            project_id = project['id']
+            bzzz_tasks = self.get_bzzz_project_tasks(project_id)
+            
+            # Only include projects that have bzzz-task labeled issues
+            if bzzz_tasks:
+                # Parse GitHub repo URL
+                repo_parts = github_repo.split('/')
+                if len(repo_parts) >= 2:
+                    owner = repo_parts[0]
+                    repository = repo_parts[1]
+                    
+                    active_repos.append({
+                        "project_id": hash(project_id) % 1000000,  # Simple numeric ID for compatibility
+                        "name": project['name'],
+                        "git_url": f"https://github.com/{github_repo}",
+                        "owner": owner,
+                        "repository": repository,
+                        "branch": "main",  # Default branch
+                        "bzzz_enabled": True,
+                        "ready_to_claim": len(bzzz_tasks) > 0,
+                        "private_repo": False,  # TODO: Detect from GitHub API
+                        "github_token_required": False  # TODO: Implement token requirement logic
+                    })
+        
+        return active_repos
+    
+    def get_bzzz_project_tasks(self, project_id: str) -> List[Dict[str, Any]]:
+        """Get GitHub issues with bzzz-task label for a specific project."""
+        project_path = self.projects_base_path / project_id
+        if not project_path.exists():
+            return []
+        
+        # Get GitHub repository
+        git_config_path = project_path / ".git" / "config"
+        if not git_config_path.exists():
+            return []
+        
+        github_repo = self._extract_github_repo(git_config_path)
+        if not github_repo:
+            return []
+        
+        # Fetch issues with bzzz-task label
+        if not self.github_token:
+            return []
+        
+        try:
+            url = f"{self.github_api_base}/repos/{github_repo}/issues"
+            headers = {
+                "Authorization": f"token {self.github_token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            params = {
+                "labels": "bzzz-task",
+                "state": "open"
+            }
+            
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            if response.status_code == 200:
+                issues = response.json()
+                
+                # Convert to Bzzz format
+                bzzz_tasks = []
+                for issue in issues:
+                    # Check if already claimed (has assignee)
+                    is_claimed = bool(issue.get('assignees'))
+                    
+                    bzzz_tasks.append({
+                        "number": issue['number'],
+                        "title": issue['title'],
+                        "description": issue.get('body', ''),
+                        "state": issue['state'],
+                        "labels": [label['name'] for label in issue.get('labels', [])],
+                        "created_at": issue['created_at'],
+                        "updated_at": issue['updated_at'],
+                        "html_url": issue['html_url'],
+                        "is_claimed": is_claimed,
+                        "assignees": [assignee['login'] for assignee in issue.get('assignees', [])],
+                        "task_type": self._determine_task_type(issue)
+                    })
+                
+                return bzzz_tasks
+                
+        except Exception as e:
+            print(f"Error fetching bzzz-task issues for {github_repo}: {e}")
+        
+        return []
+    
+    def _determine_task_type(self, issue: Dict) -> str:
+        """Determine the task type from GitHub issue labels and content."""
+        labels = [label['name'].lower() for label in issue.get('labels', [])]
+        title_lower = issue['title'].lower()
+        body_lower = (issue.get('body') or '').lower()
+        
+        # Map common labels to task types
+        type_mappings = {
+            'bug': ['bug', 'error', 'fix'],
+            'feature': ['feature', 'enhancement', 'new'],
+            'documentation': ['docs', 'documentation', 'readme'],
+            'refactor': ['refactor', 'cleanup', 'optimization'],
+            'testing': ['test', 'testing', 'qa'],
+            'infrastructure': ['infra', 'deployment', 'devops', 'ci/cd'],
+            'security': ['security', 'vulnerability', 'auth'],
+            'ui/ux': ['ui', 'ux', 'frontend', 'design']
+        }
+        
+        for task_type, keywords in type_mappings.items():
+            if any(keyword in labels for keyword in keywords) or \
+               any(keyword in title_lower for keyword in keywords) or \
+               any(keyword in body_lower for keyword in keywords):
+                return task_type
+        
+        return 'general'
+    
+    def claim_bzzz_task(self, project_id: str, task_number: int, agent_id: str) -> str:
+        """Register task claim with Hive system."""
+        # For now, just log the claim - in future this would update a database
+        claim_id = f"{project_id}-{task_number}-{agent_id}"
+        print(f"Bzzz task claimed: Project {project_id}, Task #{task_number}, Agent {agent_id}")
+        
+        # TODO: Store claim in database with timestamp
+        # TODO: Update GitHub issue assignee if GitHub token has write access
+        
+        return claim_id
+    
+    def update_bzzz_task_status(self, project_id: str, task_number: int, status: str, metadata: Dict[str, Any]) -> None:
+        """Update task status in Hive system."""
+        print(f"Bzzz task status update: Project {project_id}, Task #{task_number}, Status: {status}")
+        print(f"Metadata: {metadata}")
+        
+        # TODO: Store status update in database
+        # TODO: Update GitHub issue status/comments if applicable
+        
+        # Handle escalation status
+        if status == "escalated":
+            print(f"Task escalated for human review: {metadata}")
+            # TODO: Trigger N8N webhook for human escalation

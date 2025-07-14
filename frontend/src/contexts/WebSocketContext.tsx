@@ -19,7 +19,7 @@ interface WebSocketProviderProps {
 
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ 
   children, 
-  url = process.env.REACT_APP_WS_URL || 'wss://hive.home.deepblack.cloud/socket.io/general'
+  url = import.meta.env.VITE_WS_BASE_URL || 'wss://hive.home.deepblack.cloud'
 }) => {
   const [subscriptions, setSubscriptions] = useState<Map<string, Set<(data: any) => void>>>(new Map());
 

@@ -21,156 +21,167 @@ import WorkflowDashboard from './components/workflows/WorkflowDashboard'
 import ClusterNodes from './components/cluster/ClusterNodes'
 
 function App() {
+  // Check for connection issues and provide fallback
+  const socketIOEnabled = import.meta.env.VITE_DISABLE_SOCKETIO !== 'true';
+  
+  const AppContent = () => (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={<Login />} />
+      
+      {/* Protected routes */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <Layout>
+            <Dashboard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Projects */}
+      <Route path="/projects" element={
+        <ProtectedRoute>
+          <Layout>
+            <ProjectList />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/projects/new" element={
+        <ProtectedRoute>
+          <Layout>
+            <ProjectForm mode="create" />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/projects/:id" element={
+        <ProtectedRoute>
+          <Layout>
+            <ProjectDetail />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/projects/:id/edit" element={
+        <ProtectedRoute>
+          <Layout>
+            <ProjectForm mode="edit" />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Workflows */}
+      <Route path="/workflows" element={
+        <ProtectedRoute>
+          <Layout>
+            <WorkflowDashboard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/workflows/new" element={
+        <ProtectedRoute>
+          <Layout>
+            <WorkflowEditor />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/workflows/:id" element={
+        <ProtectedRoute>
+          <Layout>
+            <WorkflowEditor />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/workflows/:id/edit" element={
+        <ProtectedRoute>
+          <Layout>
+            <WorkflowEditor />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/workflows/templates" element={
+        <ProtectedRoute>
+          <Layout>
+            <WorkflowTemplates />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Cluster */}
+      <Route path="/cluster" element={
+        <ProtectedRoute>
+          <Layout>
+            <ClusterNodes />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/cluster/nodes" element={
+        <ProtectedRoute>
+          <Layout>
+            <ClusterNodes />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Agents */}
+      <Route path="/agents" element={
+        <ProtectedRoute>
+          <Layout>
+            <Agents />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Executions */}
+      <Route path="/executions" element={
+        <ProtectedRoute>
+          <Layout>
+            <Executions />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Analytics */}
+      <Route path="/analytics" element={
+        <ProtectedRoute>
+          <Layout>
+            <Analytics />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* User Profile */}
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Layout>
+            <UserProfile />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Settings */}
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Layout>
+            <Settings />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Redirect unknown routes to dashboard */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+
   return (
     <Router>
       <AuthProvider>
         <ReactFlowProvider>
-          <SocketIOProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              
-              {/* Protected routes */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Projects */}
-              <Route path="/projects" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ProjectList />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/projects/new" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ProjectForm mode="create" />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/projects/:id" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ProjectDetail />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/projects/:id/edit" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ProjectForm mode="edit" />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Workflows */}
-              <Route path="/workflows" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <WorkflowDashboard />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/workflows/new" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <WorkflowEditor />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/workflows/:id" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <WorkflowEditor />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/workflows/:id/edit" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <WorkflowEditor />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/workflows/templates" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <WorkflowTemplates />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Cluster */}
-              <Route path="/cluster" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ClusterNodes />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/cluster/nodes" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ClusterNodes />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Agents */}
-              <Route path="/agents" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Agents />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Executions */}
-              <Route path="/executions" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Executions />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Analytics */}
-              <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Analytics />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* User Profile */}
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <UserProfile />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Settings */}
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Settings />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              {/* Redirect unknown routes to dashboard */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </SocketIOProvider>
+          {socketIOEnabled ? (
+            <SocketIOProvider>
+              <AppContent />
+            </SocketIOProvider>
+          ) : (
+            <AppContent />
+          )}
         </ReactFlowProvider>
       </AuthProvider>
     </Router>

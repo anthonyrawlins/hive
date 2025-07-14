@@ -1,7 +1,7 @@
 services:
   # Hive Backend API
   hive-backend:
-    image: anthonyrawlins/hive-backend:latest
+    image: registry.home.deepblack.cloud/tony/hive-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -19,6 +19,8 @@ services:
     networks:
       - hive-network
       - tengig
+    secrets:
+      - github_token
     deploy:
       replicas: 1
       restart_policy:
@@ -30,9 +32,9 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-      placement:
-        constraints: 
-          - node.hostname == walnut
+#      placement:
+#        constraints: 
+#          - node.hostname == walnut
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=tengig"
@@ -55,13 +57,10 @@ services:
 
   # Hive Frontend
   hive-frontend:
-    image: anthonyrawlins/hive-frontend:latest
+    image: registry.home.deepblack.cloud/tony/hive-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      - REACT_APP_API_URL=https://hive.home.deepblack.cloud
-      - REACT_APP_SOCKETIO_URL=https://hive.home.deepblack.cloud
     depends_on:
       - hive-backend
     ports:
@@ -114,8 +113,8 @@ services:
       - 5678:5678
     deploy:
       placement:
-        constraints:
-          - node.hostname == walnut
+        constraints: []
+#          - node.hostname == walnut
       labels:
           - "traefik.enable=true"
           - "traefik.http.routers.n8n.rule=Host(`n8n.home.deepblack.cloud`)"
@@ -264,3 +263,7 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
+
+secrets:
+  github_token:
+    external: true

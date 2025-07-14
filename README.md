@@ -126,8 +126,8 @@ docker stack rm hive && docker stack deploy -c docker-compose.swarm.yml hive
 docker stack rm hive
 
 # Rebuild and restart
-docker build -t anthonyrawlins/hive-backend:latest ./backend
-docker build -t anthonyrawlins/hive-frontend:latest ./frontend
+docker build -t registry.home.deepblack.cloud/tony/hive-backend:latest ./backend
+docker build -t registry.home.deepblack.cloud/tony/hive-frontend:latest ./frontend
 docker stack deploy -c docker-compose.swarm.yml hive
 ```
 

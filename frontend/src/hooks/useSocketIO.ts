@@ -36,8 +36,8 @@ export const useSocketIO = (options: SocketIOHookOptions): SocketIOHookReturn =>
   const {
     url,
     autoConnect = true,
-    reconnectionAttempts = 5,
-    reconnectionDelay = 1000,
+    reconnectionAttempts = 3,
+    reconnectionDelay = 5000,
     onMessage,
     onConnect,
     onDisconnect,
@@ -70,7 +70,8 @@ export const useSocketIO = (options: SocketIOHookOptions): SocketIOHookReturn =>
         reconnectionAttempts,
         reconnectionDelay,
         timeout: 20000,
-        forceNew: false
+        forceNew: false,
+        path: '/socket.io/'
       });
 
       socketInstance.on('connect', () => {
@@ -89,15 +90,17 @@ export const useSocketIO = (options: SocketIOHookOptions): SocketIOHookReturn =>
       });
 
       socketInstance.on('connect_error', (error) => {
-        console.error('Socket.IO connection error:', error);
+        console.warn('Socket.IO connection error (backend may be offline):', error.message);
         setConnectionState('error');
-        onError?.(error);
+        // Don't call onError for connection errors to reduce noise
+        // onError?.(error);
       });
 
       socketInstance.on('reconnect_error', (error) => {
-        console.error('Socket.IO reconnection error:', error);
+        console.warn('Socket.IO reconnection error (backend may be offline):', error.message);
         setConnectionState('error');
-        onError?.(error);
+        // Don't call onError for reconnection errors to reduce noise
+        // onError?.(error);
       });
 
       socketInstance.on('reconnect', (attemptNumber) => {
@@ -109,9 +112,10 @@ export const useSocketIO = (options: SocketIOHookOptions): SocketIOHookReturn =>
       });
 
       socketInstance.on('reconnect_failed', () => {
-        console.error('Socket.IO reconnection failed');
+        console.warn('Socket.IO reconnection failed (backend may be offline)');
         setConnectionState('error');
-        onError?.(new Error('Reconnection failed'));
+        // Don't call onError for reconnection failures to reduce noise
+        // onError?.(new Error('Reconnection failed'));
       });
 
       // Listen for connection confirmation

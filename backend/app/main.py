@@ -177,6 +177,10 @@ app = FastAPI(
         {
             "name": "distributed-workflows",
             "description": "Advanced distributed workflow management"
+        },
+        {
+            "name": "bzzz-integration",
+            "description": "Bzzz P2P task coordination system integration"
         }
     ],
     lifespan=lifespan
@@ -232,6 +236,7 @@ app.include_router(workflows.router, prefix="/api", tags=["workflows"])
 app.include_router(executions.router, prefix="/api", tags=["executions"])
 app.include_router(monitoring.router, prefix="/api", tags=["monitoring"])
 app.include_router(projects.router, prefix="/api", tags=["projects"])
+app.include_router(projects.bzzz_router, prefix="/api", tags=["bzzz-integration"])
 app.include_router(tasks.router, prefix="/api", tags=["tasks"])
 app.include_router(cluster.router, prefix="/api", tags=["cluster"])
 app.include_router(distributed_workflows.router, tags=["distributed-workflows"])

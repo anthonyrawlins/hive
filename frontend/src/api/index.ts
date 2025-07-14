@@ -117,7 +117,7 @@ export interface APIError {
 
 // Unified API configuration
 export const API_CONFIG = {
-  BASE_URL: process.env.VITE_API_BASE_URL || 'http://localhost:8087',
+  BASE_URL: process.env.VITE_API_BASE_URL || 'https://hive.home.deepblack.cloud',
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,

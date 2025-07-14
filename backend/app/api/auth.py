@@ -157,6 +157,28 @@ async def login(
     
     token_response = create_token_response(user.id, user_data)
     
+    # Create UserResponse object for proper serialization
+    user_response = UserResponse(
+        id=user_data["id"],
+        username=user_data["username"], 
+        email=user_data["email"],
+        full_name=user_data["full_name"],
+        is_active=user_data["is_active"],
+        is_superuser=user_data["is_superuser"],
+        is_verified=user_data["is_verified"],
+        created_at=user_data["created_at"],
+        last_login=user_data["last_login"]
+    )
+    
+    # Create final response manually to avoid datetime serialization issues
+    final_response = TokenResponse(
+        access_token=token_response["access_token"],
+        refresh_token=token_response["refresh_token"],
+        token_type=token_response["token_type"],
+        expires_in=token_response["expires_in"],
+        user=user_response
+    )
+    
     # Store refresh token in database
     refresh_token_plain = token_response["refresh_token"]
     refresh_token_hash = User.hash_password(refresh_token_plain)
@@ -179,7 +201,7 @@ async def login(
     db.add(refresh_token_record)
     db.commit()
     
-    return TokenResponse(**token_response)
+    return final_response
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -230,7 +252,28 @@ async def refresh_token(
         user_data = user.to_dict()
         user_data["scopes"] = ["admin"] if user.is_superuser else []
         
-        return TokenResponse(**create_token_response(user.id, user_data))
+        token_response = create_token_response(user.id, user_data)
+        
+        # Create UserResponse object for proper serialization
+        user_response = UserResponse(
+            id=user_data["id"],
+            username=user_data["username"], 
+            email=user_data["email"],
+            full_name=user_data["full_name"],
+            is_active=user_data["is_active"],
+            is_superuser=user_data["is_superuser"],
+            is_verified=user_data["is_verified"],
+            created_at=user_data["created_at"],
+            last_login=user_data["last_login"]
+        )
+        
+        return TokenResponse(
+            access_token=token_response["access_token"],
+            refresh_token=token_response["refresh_token"],
+            token_type=token_response["token_type"],
+            expires_in=token_response["expires_in"],
+            user=user_response
+        )
         
     except HTTPException:
         raise

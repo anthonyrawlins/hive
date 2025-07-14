@@ -4,7 +4,7 @@ import { Workflow, WorkflowExecution } from '../types/workflow';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.VITE_API_BASE_URL || 'http://localhost:8087',
+  baseURL: process.env.VITE_API_BASE_URL || 'https://hive.home.deepblack.cloud',
   headers: {
     'Content-Type': 'application/json',
   },

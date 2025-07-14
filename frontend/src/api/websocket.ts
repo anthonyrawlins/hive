@@ -87,7 +87,7 @@ export class WebSocketService {
       return;
     }
 
-    const baseURL = process.env.REACT_APP_SOCKETIO_URL || 'https://hive.home.deepblack.cloud';
+    const baseURL = import.meta.env.VITE_WS_BASE_URL || 'https://hive.home.deepblack.cloud';
     
     this.socket = io(baseURL, {
       auth: {

@@ -15,7 +15,7 @@ Key Features:
 
 from fastapi import APIRouter, HTTPException, Request, Depends, status
 from typing import List, Dict, Any
-from ..core.unified_coordinator import Agent, AgentType
+from ..models.agent import Agent
 from ..models.responses import (
     AgentListResponse, 
     AgentRegistrationResponse, 

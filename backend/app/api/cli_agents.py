@@ -20,7 +20,7 @@ from datetime import datetime
 
 from ..core.database import get_db
 from ..models.agent import Agent as ORMAgent
-from ..core.unified_coordinator import UnifiedCoordinator, Agent, AgentType
+from ..core.unified_coordinator_refactored import UnifiedCoordinatorRefactored as UnifiedCoordinator
 from ..cli_agents.cli_agent_manager import get_cli_agent_manager
 from ..models.responses import (
     CliAgentListResponse,

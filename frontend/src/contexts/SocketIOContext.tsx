@@ -21,8 +21,30 @@ interface SocketIOProviderProps {
 
 export const SocketIOProvider: React.FC<SocketIOProviderProps> = ({ 
   children, 
-  url = process.env.REACT_APP_SOCKETIO_URL || 'https://hive.home.deepblack.cloud'
+  url = import.meta.env.VITE_WS_BASE_URL || 'https://hive.home.deepblack.cloud'
 }) => {
+  // Allow disabling SocketIO completely via environment variable
+  const socketIODisabled = import.meta.env.VITE_DISABLE_SOCKETIO === 'true';
+  
+  if (socketIODisabled) {
+    console.log('Socket.IO disabled via environment variable');
+    const contextValue: SocketIOContextType = {
+      isConnected: false,
+      connectionState: 'disconnected',
+      sendMessage: () => console.warn('Socket.IO is disabled'),
+      joinRoom: () => console.warn('Socket.IO is disabled'),
+      leaveRoom: () => console.warn('Socket.IO is disabled'),
+      lastMessage: null,
+      subscribe: () => () => {},
+      reconnect: () => console.warn('Socket.IO is disabled')
+    };
+    
+    return (
+      <SocketIOContext.Provider value={contextValue}>
+        {children}
+      </SocketIOContext.Provider>
+    );
+  }
   const [subscriptions, setSubscriptions] = useState<Map<string, Set<(data: any) => void>>>(new Map());
 
   const {
@@ -50,7 +72,7 @@ export const SocketIOProvider: React.FC<SocketIOProviderProps> = ({
       }
     },
     onConnect: () => {
-      console.log('Socket.IO connected to Hive backend');
+      console.log('✅ Socket.IO connected to Hive backend');
       
       // Join general room and subscribe to common events
       if (socket) {
@@ -62,10 +84,11 @@ export const SocketIOProvider: React.FC<SocketIOProviderProps> = ({
       }
     },
     onDisconnect: () => {
-      console.log('Socket.IO disconnected from Hive backend');
+      console.log('🔌 Socket.IO disconnected from Hive backend');
     },
     onError: (error) => {
-      console.error('Socket.IO error:', error);
+      // Errors are already logged in the hook, don't duplicate
+      // console.error('Socket.IO error:', error);
     }
   });
 

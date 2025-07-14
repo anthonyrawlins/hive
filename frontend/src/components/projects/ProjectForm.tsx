@@ -20,6 +20,16 @@ const projectSchema = z.object({
     owner: z.string().optional(),
     department: z.string().optional(),
     priority: z.enum(['low', 'medium', 'high']).optional()
+  }).optional(),
+  bzzz_config: z.object({
+    git_url: z.string().url('Must be a valid Git URL').optional().or(z.literal('')),
+    git_owner: z.string().optional(),
+    git_repository: z.string().optional(),
+    git_branch: z.string().optional(),
+    bzzz_enabled: z.boolean().optional(),
+    ready_to_claim: z.boolean().optional(),
+    private_repo: z.boolean().optional(),
+    github_token_required: z.boolean().optional()
   }).optional()
 });
 
@@ -52,11 +62,46 @@ export default function ProjectForm({ mode, initialData, projectId }: ProjectFor
         owner: initialData?.metadata?.owner || '',
         department: initialData?.metadata?.department || '',
         priority: initialData?.metadata?.priority || 'medium'
+      },
+      bzzz_config: {
+        git_url: initialData?.bzzz_config?.git_url || '',
+        git_owner: initialData?.bzzz_config?.git_owner || '',
+        git_repository: initialData?.bzzz_config?.git_repository || '',
+        git_branch: initialData?.bzzz_config?.git_branch || 'main',
+        bzzz_enabled: initialData?.bzzz_config?.bzzz_enabled || false,
+        ready_to_claim: initialData?.bzzz_config?.ready_to_claim || false,
+        private_repo: initialData?.bzzz_config?.private_repo || false,
+        github_token_required: initialData?.bzzz_config?.github_token_required || false
       }
     }
   });
 
   const currentTags = watch('tags') || [];
+  const gitUrl = watch('bzzz_config.git_url') || '';
+  const bzzzEnabled = watch('bzzz_config.bzzz_enabled') || false;
+
+  // Auto-parse Git URL to extract owner and repository
+  const parseGitUrl = (url: string) => {
+    if (!url) return;
+    
+    try {
+      // Handle GitHub URLs like https://github.com/owner/repo or git@github.com:owner/repo.git
+      const githubMatch = url.match(/github\.com[/:]([\w-]+)\/([\w-]+)(?:\.git)?$/);
+      if (githubMatch) {
+        const [, owner, repo] = githubMatch;
+        setValue('bzzz_config.git_owner', owner);
+        setValue('bzzz_config.git_repository', repo);
+      }
+    } catch (error) {
+      console.log('Could not parse Git URL:', error);
+    }
+  };
+
+  // Watch for Git URL changes and auto-parse
+  const handleGitUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    parseGitUrl(url);
+  };
 
   const createProjectMutation = useMutation({
     mutationFn: async (data: ProjectFormData) => {
@@ -311,6 +356,181 @@ export default function ProjectForm({ mode, initialData, projectId }: ProjectFor
                   <option value="high">High</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Bzzz Integration Configuration */}
+          <div className="bg-white shadow-sm rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <h2 className="text-lg font-medium text-gray-900">🐝 Bzzz P2P Integration</h2>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Beta
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Configure this project for distributed AI task coordination via the Bzzz P2P network.
+              </p>
+            </div>
+            
+            <div className="px-6 py-4 space-y-6">
+              {/* Enable Bzzz Integration */}
+              <div>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="bzzz_enabled"
+                    {...register('bzzz_config.bzzz_enabled')}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="bzzz_enabled" className="text-sm font-medium text-gray-700">
+                    Enable Bzzz P2P coordination for this project
+                  </label>
+                </div>
+                <p className="text-sm text-gray-500 mt-1 ml-7">
+                  Allow Bzzz agents to discover and work on tasks from this project's GitHub repository.
+                </p>
+              </div>
+
+              {/* Git Repository Configuration - Only show if Bzzz is enabled */}
+              {bzzzEnabled && (
+                <>
+                  {/* Git Repository URL */}
+                  <div>
+                    <label htmlFor="git_url" className="block text-sm font-medium text-gray-700 mb-2">
+                      Git Repository URL *
+                    </label>
+                    <input
+                      type="url"
+                      id="git_url"
+                      {...register('bzzz_config.git_url')}
+                      onChange={handleGitUrlChange}
+                      className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="https://github.com/owner/repository"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      GitHub repository URL where Bzzz will look for issues labeled with 'bzzz-task'.
+                    </p>
+                    {errors.bzzz_config?.git_url && (
+                      <p className="mt-1 text-sm text-red-600">{errors.bzzz_config.git_url.message}</p>
+                    )}
+                  </div>
+
+                  {/* Auto-parsed Git Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="git_owner" className="block text-sm font-medium text-gray-700 mb-2">
+                        Repository Owner
+                      </label>
+                      <input
+                        type="text"
+                        id="git_owner"
+                        {...register('bzzz_config.git_owner')}
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Auto-detected from URL"
+                        readOnly
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="git_repository" className="block text-sm font-medium text-gray-700 mb-2">
+                        Repository Name
+                      </label>
+                      <input
+                        type="text"
+                        id="git_repository"
+                        {...register('bzzz_config.git_repository')}
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Auto-detected from URL"
+                        readOnly
+                      />
+                    </div>
+                  </div>
+
+                  {/* Git Branch */}
+                  <div>
+                    <label htmlFor="git_branch" className="block text-sm font-medium text-gray-700 mb-2">
+                      Default Branch
+                    </label>
+                    <input
+                      type="text"
+                      id="git_branch"
+                      {...register('bzzz_config.git_branch')}
+                      className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="main"
+                    />
+                  </div>
+
+                  {/* Repository Configuration */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-gray-700">Repository Configuration</h3>
+                    
+                    <div className="space-y-2">
+                      {/* Ready to Claim */}
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="ready_to_claim"
+                          {...register('bzzz_config.ready_to_claim')}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="ready_to_claim" className="text-sm text-gray-700">
+                          Ready for task claims (agents can start working immediately)
+                        </label>
+                      </div>
+
+                      {/* Private Repository */}
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="private_repo"
+                          {...register('bzzz_config.private_repo')}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="private_repo" className="text-sm text-gray-700">
+                          Private repository (requires authentication)
+                        </label>
+                      </div>
+
+                      {/* GitHub Token Required */}
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="github_token_required"
+                          {...register('bzzz_config.github_token_required')}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="github_token_required" className="text-sm text-gray-700">
+                          Requires GitHub token for API access
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bzzz Integration Info */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex">
+                      <InformationCircleIcon className="h-5 w-5 text-yellow-400" />
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-yellow-800">
+                          How Bzzz Integration Works
+                        </h3>
+                        <div className="mt-2 text-sm text-yellow-700">
+                          <p>When enabled, Bzzz agents will:</p>
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            <li>Monitor GitHub issues labeled with 'bzzz-task'</li>
+                            <li>Coordinate P2P to assign tasks based on agent capabilities</li>
+                            <li>Execute tasks using distributed AI reasoning</li>
+                            <li>Report progress and escalate when needed</li>
+                          </ul>
+                          <p className="mt-2 font-medium">
+                            Make sure your repository has issues labeled with 'bzzz-task' for agents to discover.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

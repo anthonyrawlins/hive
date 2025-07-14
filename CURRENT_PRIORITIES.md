@@ -74,7 +74,7 @@
 ### **Phase 2: Docker Image Rebuild (ETA: 15 minutes)**
 1. **Rebuild Frontend Docker Image**
    ```bash
-   docker build -t anthonyrawlins/hive-frontend:latest ./frontend
+   docker build -t registry.home.deepblack.cloud/tony/hive-frontend:latest ./frontend
    ```
 
 2. **Redeploy Stack**
