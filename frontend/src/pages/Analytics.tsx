@@ -94,14 +94,15 @@ export default function Analytics() {
 
   const [timeSeriesData] = useState(() => generateTimeSeriesData());
 
-  // Calculate execution analytics
+  // Calculate execution analytics - ensure executions is an array
+  const executionsArray = Array.isArray(executions) ? executions : [];
   const executionStats = {
-    total: executions.length,
-    completed: executions.filter(e => e.status === 'completed').length,
-    failed: executions.filter(e => e.status === 'failed').length,
-    running: executions.filter(e => e.status === 'running').length,
-    success_rate: executions.length > 0 ? 
-      Math.round((executions.filter(e => e.status === 'completed').length / executions.length) * 100) : 0
+    total: executionsArray.length,
+    completed: executionsArray.filter(e => e.status === 'completed').length,
+    failed: executionsArray.filter(e => e.status === 'failed').length,
+    running: executionsArray.filter(e => e.status === 'running').length,
+    success_rate: executionsArray.length > 0 ? 
+      Math.round((executionsArray.filter(e => e.status === 'completed').length / executionsArray.length) * 100) : 0
   };
 
   // Execution status distribution for pie chart
@@ -109,7 +110,7 @@ export default function Analytics() {
     { name: 'Completed', value: executionStats.completed, color: '#10B981' },
     { name: 'Failed', value: executionStats.failed, color: '#EF4444' },
     { name: 'Running', value: executionStats.running, color: '#3B82F6' },
-    { name: 'Pending', value: executions.filter(e => e.status === 'pending').length, color: '#F59E0B' }
+    { name: 'Pending', value: executionsArray.filter(e => e.status === 'pending').length, color: '#F59E0B' }
   ].filter(item => item.value > 0);
 
   // Performance trends data

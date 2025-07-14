@@ -301,11 +301,13 @@ export default function Agents() {
     );
   }
 
-  const onlineAgents = agents.filter((agent: Agent) => agent.status === 'online' || agent.status === 'available').length;
-  const busyAgents = agents.filter((agent: Agent) => agent.status === 'busy').length;
-  const ollamaAgents = agents.filter((agent: Agent) => !agent.agent_type || agent.agent_type === 'ollama').length;
-  const cliAgents = agents.filter((agent: Agent) => agent.agent_type === 'cli').length;
-  const totalTasks = agents.reduce((sum: number, agent: Agent) => sum + (agent.metrics?.tasks_completed || 0), 0);
+  // Ensure agents is an array before using filter/reduce
+  const agentsArray = Array.isArray(agents) ? agents : [];
+  const onlineAgents = agentsArray.filter((agent: Agent) => agent.status === 'online' || agent.status === 'available').length;
+  const busyAgents = agentsArray.filter((agent: Agent) => agent.status === 'busy').length;
+  const ollamaAgents = agentsArray.filter((agent: Agent) => !agent.agent_type || agent.agent_type === 'ollama').length;
+  const cliAgents = agentsArray.filter((agent: Agent) => agent.agent_type === 'cli').length;
+  const totalTasks = agentsArray.reduce((sum: number, agent: Agent) => sum + (agent.metrics?.tasks_completed || 0), 0);
 
   return (
     <div className="p-6">
