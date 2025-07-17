@@ -282,9 +282,11 @@ def check_component_health(component_name: str, check_function) -> Dict[str, Any
     """
     try:
         result = check_function()
+        # Ensure details is always a dictionary
+        details = result if isinstance(result, dict) else {"status": result}
         return {
             "status": "healthy",
-            "details": result,
+            "details": details,
             "last_check": datetime.utcnow().isoformat()
         }
     except Exception as e:

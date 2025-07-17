@@ -459,8 +459,8 @@ class ProjectService:
             print("DEBUG: Attempting to connect to database...")
             # Connect to database
             conn = psycopg2.connect(
-                host="192.168.1.27",
-                port=5433,
+                host="postgres",
+                port=5432,
                 database="hive",
                 user="hive",
                 password="hivepass"

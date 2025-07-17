@@ -116,8 +116,52 @@ CREATE INDEX idx_tasks_status_priority ON tasks(status, priority DESC, created_a
 CREATE INDEX idx_agent_metrics_timestamp ON agent_metrics(timestamp);
 CREATE INDEX idx_agent_metrics_agent_time ON agent_metrics(agent_id, timestamp);
 CREATE INDEX idx_alerts_unresolved ON alerts(resolved, created_at) WHERE resolved = false;
+CREATE INDEX idx_projects_name ON projects(name);
+CREATE INDEX idx_projects_bzzz_enabled ON projects(bzzz_enabled) WHERE bzzz_enabled = true;
+CREATE INDEX idx_projects_ready_to_claim ON projects(ready_to_claim) WHERE ready_to_claim = true;
+
+-- Project Management for Bzzz Integration
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    status VARCHAR(50) DEFAULT 'active',
+    github_repo VARCHAR(255),
+    git_url VARCHAR(255),
+    git_owner VARCHAR(255),
+    git_repository VARCHAR(255), 
+    git_branch VARCHAR(255) DEFAULT 'main',
+    bzzz_enabled BOOLEAN DEFAULT false,
+    ready_to_claim BOOLEAN DEFAULT false,
+    private_repo BOOLEAN DEFAULT false,
+    github_token_required BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Refresh Tokens for Authentication
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Token Blacklist for Security
+CREATE TABLE token_blacklist (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    token_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    blacklisted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Sample data
 INSERT INTO users (email, hashed_password, role) VALUES 
 ('admin@hive.local', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lewohT6ZErjH.2T.2', 'admin'),
 ('developer@hive.local', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lewohT6ZErjH.2T.2', 'developer');
+
+-- Sample project data
+INSERT INTO projects (name, description, status, github_repo, git_url, git_owner, git_repository, git_branch, bzzz_enabled, ready_to_claim, private_repo, github_token_required) VALUES 
+('hive', 'Distributed task coordination system with AI agents', 'active', 'anthonyrawlins/hive', 'https://github.com/anthonyrawlins/hive.git', 'anthonyrawlins', 'hive', 'main', true, true, false, false),
+('bzzz', 'P2P collaborative development coordination system', 'active', 'anthonyrawlins/bzzz', 'https://github.com/anthonyrawlins/bzzz.git', 'anthonyrawlins', 'bzzz', 'main', true, true, false, false);

@@ -258,6 +258,11 @@ class ComponentStatus(BaseModel):
     status: StatusEnum = Field(..., description="Component status")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional status details")
     last_check: datetime = Field(default_factory=datetime.utcnow, description="Last status check time")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
 
 
 class SystemStatusResponse(BaseResponse):
